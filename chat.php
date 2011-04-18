@@ -5,7 +5,7 @@ define("DB_USER_TABLE", "testchatuser");
 define("DB_LOG_TABLE", "testchat");
 $now=time();
 
-$conn = mysql_connect('localhost', 'na2hiro', 'RZpah0UKpveb') or die(mysql_error());
+$conn = mysql_connect('localhost', 'user', 'password') or die(mysql_error());
 mysql_select_db('chat') or die(mysql_error());
 mysql_query("SET NAMES utf8");
 if(isset($_REQUEST['sessionid']) && $_REQUEST['sessionid']!=""){
