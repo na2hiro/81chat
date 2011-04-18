@@ -1,0 +1,74 @@
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<title>超軽量チャット(Ajax使用)</title>
+		<style>
+			.name{font-weight:bold;}
+			form{display:inline}
+			span b{background:#F00;color:#FFF;padding:4px}
+			span{visibility:visible}
+			html{overflow: hidden; height:100%; }
+			body{ height:100%; width: 100%; margin:0;font-family: 'Arial';}
+			#plog{overflow:auto;width:100%;padding:0;margin:0;position:absolute;top:55px;bottom:0;background-color:#fff}
+			#log{padding:5px}
+			#joubu{padding:5px;white-space:nowrap;}
+			
+			/*入室者リスト*/
+			#disp{position:absolute;right:20px;bottom:20px;text-align:right;filter:alpha(opacity=45); /*IE*/-moz-opacity:0.45; /*FF*/opacity:0.45;z-index:100;visibility:hidden;}
+			#inlist{display:inline;margin:0;padding:0;visibility:hidden;}
+			#inlist li{display:block; list-style:none;visibility:hidden;}
+			#inlist li span{background-color:#dddddd;font-weight:bold;visibility:visible;}
+			#editor{position:absolute;bottom:50px;left:50px;z-index:0;width:60%}
+		
+		</style>
+		<script type="text/javascript" charset="utf-8" src="http://81.la/cgi-bin/bredima/bredima.js"></script>
+		<script type="text/javascript">
+		onload = function() {
+		    Bredima.setConfig('uri_img', 'http://81.la/cgi-bin/bredima/img/');
+		    Bredima.setConfig('uri_mimetex', 'http://81.la/cgi-bin/mimetex.cgi');
+		    b1 = new Bredima(document.getElementById('editor'));
+		    b1.write();
+		    document.f2.n.focus();
+		}
+		</script>
+		<script type="text/javascript" charset="utf-8" src="json2.js"></script>
+	</head>
+	<body>
+		<div id="disp"></div>
+		<div id="joubu">
+		
+			<div>
+				<button onclick='siyou()'>仕様</button>
+				<a href="../shogi/" target="_blank">将棋</a>
+				<a href="../shogiwiki/" target="_blank">Wiki</a>
+				<a href="./up/" target="_blank">up</a>
+				<a href="http://81.la/~soh/chatichiran.php" target="_blank">sohlist</a>
+				<a href="http://d.hatena.ne.jp/shi3z/20110122/1295739387" target="_blank">#givemac2</a>
+				<span id="status"></span>
+			</div>
+			<div>
+				<form name="f2" action="#" onsubmit="chat1.inout(this.n.value);return false">
+				<input type="text" name="n" size=20><input type="submit" value="入室" name="login"></form>
+				
+				<form name="f" action="#" onsubmit="chat1.post(this.c.value);return false">
+				<input type="text" name="c" size="60"><!-- input type="submit" value="発言" name="hatsugen" -->
+				</form>
+				<a href="javascript:void(0);" onclick="if(gid('editor').style.zIndex==0){gid('editor').style.zIndex=100}else{gid('editor').style.zIndex=0}">数式エディタ</a> <a href="javascript:void(0);" onclick="document.f.c.value+='[math]'+b1.toLatex()+'[/math]';">数式をコピー</a>
+			</div>
+			<div id="editor"></div>
+		</div>
+		<div id="plog">
+			<div id="log">
+				<div id="d">
+					
+				</div>
+			</div>
+		</div>
+		<script type="text/javascript" charset="UTF-8" src="chat.js"></script>
+		<script type="text/javascript">
+			chat1=new HighChat();
+			chat1.check();
+			setInterval(function(){chat1.check()} , 10000);
+		</script>
+	</body>
+</html>

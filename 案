@@ -1,0 +1,44 @@
+?check=1
+
+?check=1&last=1234&userlist=[1,2,10]
+{
+	error: false,
+	lastid: 1236,
+	userlist: [1,2,10,12],
+	newusers: [
+		{
+			id: 12,
+			name: "na2hiro", 
+			last: 1239595999, 
+			ip: 136262524,
+			ua: "MacChrome",
+/*
+			countdown: {
+				name: "卒業",
+				limit: 1346780000
+			}
+*/
+		}
+	],
+	newcomments: [
+		{
+			name: "na2hiro",
+			comment: "うひょひょ",
+			date: 1234567890,
+			ip: 123456666
+		},
+		{
+			name: "うひょ",
+			comment: "ほげほげ",
+			date: 1234589910
+		}
+	]
+}
+
+
+chat-testchat:
+id
+date
+name
+comment
+ip
