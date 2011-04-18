@@ -30,12 +30,12 @@ if($myid!=NULL){
 }
 
 if(isset($_REQUEST['login'])){
-	$name=mysql_real_escape_string(htmlspecialchars($_REQUEST['login']));
+	$name=htmlspecialchars($_REQUEST['login']);
 	if($name=="") printError("名前が空です");
 	$ua=mysql_real_escape_string($_SERVER['HTTP_USER_AGENT']);
 	$ips=explode(".", $_SERVER["REMOTE_ADDR"]);
 	$ip=(($ips[0]*256+$ips[1])*256+$ips[2])*256+$ips[3];
-	$sql="INSERT INTO ".DB_USER_TABLE." VALUES(NULL, '{$name}', {$now}, {$ip}, '{$ua}')";
+	$sql="INSERT INTO ".DB_USER_TABLE." VALUES(NULL, '".mysql_real_escape_string($name)."', {$now}, {$ip}, '{$ua}')";
 	mysql_query($sql) or printError("エラー: {$sql}");
 	$myid=(int)mysql_insert_id();
 	$retarray['id']=$myid;
