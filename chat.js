@@ -8,18 +8,49 @@ function HighChat(){
 	document.f.c.style.backgroundColor = "#dddddd";
 	//document.f.hatsugen.disabled = true;	//ボタン発言
 	document.f2.n.value=this.GetCookie("name_chat");
+	var vol=this.GetCookie("volume_chat");
+	document.getElementById("audiocontrols").value=vol;
+
+	this.volume(vol);
 }
 HighChat.prototype={
+	sound: (function(){
+		var audio;
+		var soundSource=[
+			["./sound.ogg", "audio/ogg"],
+			["./sound.mp3", "audio/mp3"],
+			["./sound.wav", "audio/wav"]
+		];
+		try{
+			audio = new Audio("");
+			audio.removeAttribute("src");
+			for(var i=0,l=soundSource.length; i<l; i++){
+				var thissource = soundSource[i];
+				var source = document.createElement("source");
+				source.src=thissource[0];
+				source.type=thissource[1];
+				audio.appendChild(source);
+			}
+		}catch(e){
+			audio={
+				play: function(){}
+			};
+		}
+		return audio;
+	})(),
+	volume: function(value){
+		this.SetCookie("volume_chat", value);
+		this.sound.volume=value*0.01;
+	},
 	lastid: null,
 	userdata: {},
 	userlist: [],
 	loginid: null,
-	sessionid: null,
-	check: function(){
+	check: function(func){
 		this.gid("status").innerHTML = "<b>更新中</b>";
-		this.submit("check");
+		this.submit("check", func);
 	},
-	
+
 	writeuserlist: function(userlist){
 		var node = this.gid("disp");
 		var output="<ul id='inlist'>";
@@ -37,14 +68,55 @@ HighChat.prototype={
 		}
     	node.innerHTML ="<span style='background-color:#fff'>入室"+cnt+(cntrom?"(ROM"+cntrom+")":"")+"</span>"+output+"</ul>";
 	},
-	
-	post: function(message){
+
+	post: function(message, func){
 //		alert(message+"を送信");
 		if(message=="") return;
-		this.submit("comment="+encodeURIComponent(message)+(this.lastid==null?"":"&last="+this.lastid));
+		this.submit("comment="+encodeURIComponent(message)+(this.lastid==null?"":"&last="+this.lastid), func);
 		document.f.c.value = "";
 	},
-	
+
+	standardResponse: function(responseText){
+		try{
+			var obj=JSON.parse(responseText);
+		}catch(e){
+			alert("パースエラー: "+responseText);
+			return;
+		}
+		if(obj.error!=false){
+			this.gid("status").innerHTML="エラー! "+obj.errormessage;
+		}
+		this.write(obj.newcomments);
+		this.lastid=obj.lastid;
+		this.userlist=obj.userlist;
+		if(obj.myid==null){
+			if(this.loginid!=null){//自分のidが入っててnullが与えられた場合はログアウト
+				this.loginid=null;
+//				this.logout();
+				this.inout(document.f2.n.value);
+				return;
+			}
+		}else{
+			if(this.loginid==null){//自分のidが空っぽでidが与えられた場合ログイン(自動継続ログイン)
+				this.loginid=obj.myid;
+				this.login();
+			}
+		}
+
+		for(var i=0, l=obj.newusers.length; i<l; i++){
+			var thisuser=obj.newusers[i];
+			this.userdata[thisuser.id]={
+				name: thisuser.name,
+				last: thisuser.last,
+				ip: this.getIpByNum(thisuser.ip),
+				ua: thisuser.ua
+			}
+		}
+		this.writeuserlist(obj.userlist);
+		this.gid("status").innerHTML = "更新済";
+		this.lastObj=obj;
+	},
+
 	submit: function(send, func){
 		var http = this.LetsHTTP();
 		http.parent=this;
@@ -52,75 +124,43 @@ HighChat.prototype={
 
 		http.onreadystatechange = func || function(){
 			if(this.readyState == 4 && this.status == 200){
-//				alert(this.responseText);
-				try{
-					var obj=JSON.parse(this.responseText);
-				}catch(e){
-					alert("パースエラー: "+this.responseText);
-					return;
-				}
-				if(obj.error!=false){
-					this.parent.gid("status").innerHTML="エラー! "+obj.errormessage;
-				}
-				this.parent.write(obj.newcomments);
-				this.parent.lastid=obj.lastid;
-				this.parent.sessionid=obj.sessionid;
-				this.parent.userlist=obj.userlist;
-				if(obj.myid==null){
-					if(this.parent.loginid!=null){
-						this.parent.loginid=null;
-						this.parent.logout();
-					}
-				}else{
-					if(this.parent.loginid==null){
-						this.parent.loginid=obj.myid;
-						this.parent.login();
-					}
-				}
-				
-				for(var i=0, l=obj.newusers.length; i<l; i++){
-					var thisuser=obj.newusers[i];
-					this.parent.userdata[thisuser.id]={
-						name: thisuser.name,
-						last: thisuser.last,
-						ip: this.parent.getIpByNum(thisuser.ip),
-						ua: thisuser.ua
-					}
-				}
-				this.parent.writeuserlist(obj.userlist);
-				this.parent.gid("status").innerHTML = "更新済";
-				this.parent.lastObj=obj;
+				this.parent.standardResponse(this.responseText);
 			}
 		};
 		http.parent=this;
 		http.open("POST", "chat.php", true);
 		http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
-		var send2=send+"&userlist="+JSON.stringify(this.userlist)+"&last="+this.lastid+(this.sessionid!=null?"&sesisonid="+this.sessionid:"");
+		var send2=send+"&userlist="+JSON.stringify(this.userlist)+"&last="+this.lastid;
 //		alert(send2)
 		http.send(send2);
 	},
-	
-	
+
+	getColorByIp: function(ip){
+		return "rgb("+Math.floor(parseInt(ip[0])*0.75)+", "+
+				Math.floor(parseInt(ip[1])*0.75)+", "+
+				Math.floor(parseInt(ip[2])*0.75)+")";
+	},
+
 	write: function(comments){
+		if(comments.length==0)return;
 		for(var i=0, l=comments.length;i<l;i++){
 			var line=comments[i];
-			var newline = document.createElement("div");
 			var ip=this.getIpByNum(line.ip);
-	
-			var colorna2=this.zeroFill(Math.floor(parseInt(ip[0])/1.33).toString(16), 2)+
-						this.zeroFill(Math.floor(parseInt(ip[1])/1.33).toString(16), 2)+
-						this.zeroFill(Math.floor(parseInt(ip[2])/1.33).toString(16), 2);
-	
+			var colorna2=this.getColorByIp(ip);
+
 			ip=ip.join(".");
-	
 			if(ip==disip) continue;
-	
 			var D = new Date(line.date*1000).formatTime();
 			if(/NaN/.test(D)){continue}
-			newline.innerHTML = [
-				"<span style='color:#",colorna2,"'><span class='name'>",
-				line.name,
-				"</span>&gt; ",
+
+			var newline1 = document.createElement("dt");
+			newline1.style.color=colorna2;
+			newline1.className="name";
+			newline1.innerHTML=line.name;
+
+			var newline2 = document.createElement("dd");
+			newline2.style.color=colorna2;
+			newline2.innerHTML=[
 				line.comment
 					.replace(/(http:\/\/gyazo.com\/[\x21\x23-\x3b\x3d-\x7e]+?\.png)/ig, "<a href=\"$1\" target='_blank'>[Gyazo]</a>")
 					.replace(/([^">])http(s?):\/\/([^\s\[<　]+)/gi, "$1<a href=\"http$2://$3\" target='_blank'>http$2://$3</a>")
@@ -129,17 +169,20 @@ HighChat.prototype={
 					.replace(/\[math\]([ -~]+?)\[\/math\]/ig, "<img src=\"http://81.la/cgi-bin/mimetex.cgi?$1\" title=\"$1\" alt=\"$1\">")
 					.replace(/\[s\](.+?)\[\/s\]/ig, "<s>$1</s>")
 					.replace(/\[s\](.+?)$/ig, "<s>$1</s>")
-					.replace(/#0(\d)(\d\d)/ig, "<a href='/m/$1/$2.php' target='_blank'>#0$1$2</a>") 
+					.replace(/#0(\d)(\d\d)/ig, "<a href='/m/$1/$2.php' target='_blank'>#0$1$2</a>")
 					.replace(/#([1-9]\d)(\d\d)/ig, "<a href='/m/$1/$2.php' target='_blank'>#$1$2</a>"),
-				"</span> ","<small><font color=#cccccc>(",D,", ",ip,")</font></small>"
+				" <span class='small'>(",D,", ",ip,")</span>"
 			].join("");
-			this.gid("log").insertBefore(newline,this.gid("log").firstChild);
+
+			this.gid("log").insertBefore(newline2,this.gid("log").firstChild);
+			this.gid("log").insertBefore(newline1,this.gid("log").firstChild);
 		}
+		this.sound.play();
 	},
-	
+
 	inout: function(name) {
 		if(document.f2.n.value == "" || document.f2.n.value.length>25){return}
-		
+
 		if(this.loginid==null) {
 			this.submit("login="+encodeURIComponent(name), function(){
 				if(this.readyState == 4 && this.status == 200){
@@ -155,12 +198,13 @@ HighChat.prototype={
 					}
 					this.parent.login();
 					this.parent.SetCookie("name_chat", document.f2.n.value);
-					this.parent.gid("status").innerHTML = "入室しました: "+obj.id;
 					this.parent.loginid=obj.id;
-				}	
+					this.parent.standardResponse(this.responseText);
+					this.parent.gid("status").innerHTML = "入室しました: "+obj.id;
+				}
 			});
 
-	
+
 		} else {
 			this.submit("logout=1", function(){
 				if(this.readyState == 4 && this.status == 200){
@@ -176,6 +220,7 @@ HighChat.prototype={
 					}
 					this.parent.logout();
 					this.parent.loginid=null;
+					this.parent.standardResponse(this.responseText);
 				}
 			});
 		}
@@ -191,6 +236,7 @@ HighChat.prototype={
 
 		document.f.c.value = "";
 		document.f.c.focus();
+
 	},
 	logout: function(){
 		document.f2.n.disabled = false;		//フォーム名前
@@ -203,7 +249,7 @@ HighChat.prototype={
 		document.f.c.value = "";
 		document.f2.n.focus();
 	},
-	
+
 	getIpByNum: function(num){
 		var ret=[];
 		for(var i=3; i>=0; i--){
@@ -212,7 +258,7 @@ HighChat.prototype={
 		}
 		return ret;
 	},
-	
+
 	zeroFill: function(num,keta){
 		num=String(num);
 		while(1){
@@ -221,7 +267,7 @@ HighChat.prototype={
 		}
 		return num;
 	},
-	
+
 	//クッキー関連開始 GetCookie("名前");で値を取得、SetCookie("名前", 値);
 	GetCookie: function(key){
 		var tmp = document.cookie + ";";
@@ -234,11 +280,11 @@ HighChat.prototype={
 		}
 		return("");
 	},
-	
+
 	SetCookie: function(key, val){
 		document.cookie = key + "=" + escape(val) + ";expires=Fri, 31-Dec-2030 23:59:59;";
 	},
-	
+
 	LetsHTTP: function()	//Let's HTTP!!
 	{
 		var http = null;
