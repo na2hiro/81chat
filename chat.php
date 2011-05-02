@@ -2,6 +2,7 @@
 header("Access-Control-Allow-Origin: *");
 if($_SERVER["REMOTE_ADDR"]=="61.27.73.10") printError("damn!");
 
+require("pass.php");
 define("DELETE_SPAN",60);
 define("LOG_MAX",1000);
 define("LOG_DEFAULT",30);
@@ -9,11 +10,11 @@ define("DB_USER_TABLE", "testchatuser");
 define("DB_LOG_TABLE", "testchat");
 $now=time();
 
-$conn = mysql_connect('localhost', 'user', 'pass') or die(mysql_error());
+$conn = mysql_connect('localhost', DB_USER, DB_PASS) or die(mysql_error());
 mysql_select_db('chat') or die(mysql_error());
 mysql_query("SET NAMES utf8");
-if(isset($_REQUEST['sessionid']) && $_REQUEST['sessionid']!=""){
-	session_id($_REQUEST['sessionid']);
+if(isset($_POST['sessionid']) && $_POST['sessionid']!=""){
+	session_id($_POST['sessionid']);
 }
 
 session_start();
@@ -29,20 +30,20 @@ if($myid!=NULL){
 	}
 }
 
-if(isset($_REQUEST['login'])){
-	$name=htmlspecialchars($_REQUEST['login']);
-	if($name=="") printError("名前が空です");
+if(isset($_POST['login'])){
+	$name=htmlspecialchars($_POST['login']);
+	if($name=="") printError("name must not be empty");
 	$ua=mysql_real_escape_string($_SERVER['HTTP_USER_AGENT']);
 	$ips=explode(".", $_SERVER["REMOTE_ADDR"]);
 	$ip=(($ips[0]*256+$ips[1])*256+$ips[2])*256+$ips[3];
 	$sql="INSERT INTO ".DB_USER_TABLE." VALUES(NULL, '".mysql_real_escape_string($name)."', {$now}, {$ip}, '{$ua}')";
-	mysql_query($sql) or printError("エラー: {$sql}");
+	mysql_query($sql) or printError("sql error: 1");
 	$myid=(int)mysql_insert_id();
 	$retarray['id']=$myid;
 	$_SESSION['userid']=$myid;
 	comment("<span class='in'>■入室通知</span>", "「".$name."」さんが入室", $ip);
 
-}else if(isset($_REQUEST['logout']) && $myid!=NULL){
+}else if(isset($_POST['logout']) && $myid!=NULL){
 	$sql="SELECT ip, name FROM ".DB_USER_TABLE." WHERE id = {$myid}";
 	$res=mysql_query($sql);
 	$row = mysql_fetch_assoc($res);
@@ -55,20 +56,27 @@ if(isset($_REQUEST['login'])){
 	$myid=NULL;
 	comment("<span class='out'>■退室通知</span>", "「".$name."」さんが退室", $ip);
 
-}else if(isset($_REQUEST['comment'])){
-	if($myid==NULL) printError("入室してください");
-	if(!is_numeric($myid)) printError("ユーザidが異常です");
+}else if(isset($_POST['comment'])){
+	if($myid==NULL) printError("please log in");
+	if(!is_numeric($myid)) printError("userid is wrong");
 	$sql="SELECT name, ip FROM ".DB_USER_TABLE." WHERE id = {$myid}";
 	$res=mysql_query($sql);
 	$row = mysql_fetch_assoc($res);
-	if($row==false) printError("再入室してください");
+	if($row==false) printError("please log in");
 
-	comment($row['name'], htmlspecialchars($_REQUEST['comment']), $row['ip']);
+	comment($row['name'], htmlspecialchars($_POST['comment']), $row['ip']);
+}else if(isset($_REQUEST['chalog'])){
+	if(!is_numeric($_REQUEST['chalog'])) printError("chalog must be numeric.");
+}else{
+	$noWrite=true;
+}
+if(!$noWrite){
+	if(!preg_match('/^http\:\/\/81\.la\/c/', $_SERVER['HTTP_REFERER'])) printError("referer must be 81.la/c: ".$_SERVER['HTTP_REFERER']);
 }
 
 if($myid!=NULL){
 	$sql="UPDATE ".DB_USER_TABLE." SET last = {$now} WHERE id = {$myid}";
-	mysql_query($sql) or printError("えらーa ".$sql);
+	mysql_query($sql) or printError("sql error: 2");
 }
 
 $retarray['newusers']=array();
@@ -134,16 +142,16 @@ while ($row = mysql_fetch_assoc($res)) {
 $retarray['sessionid']=session_id();
 $retarray['lastid']=(int)$id;
 $echo=json_encode($retarray);
-if($_REQUEST['callback']){
-	echo $_REQUEST['callback']."(".$echo.")";
+if($_POST['callback']){
+	echo $_POST['callback']."(".$echo.")";
 }else{
 	echo $echo;
 }
 
 function printError($message){
 	$echo=json_encode(Array('error'=>true, 'errormessage'=>$message));
-	if($_REQUEST['callback']){
-		echo $_REQUEST['callback']."(".$echo.")";
+	if($_POST['callback']){
+		echo $_POST['callback']."(".$echo.")";
 	}else{
 		echo $echo;
 	}
@@ -155,5 +163,5 @@ function comment($name, $comment, $ip){
 	$name=mysql_real_escape_string($name);
 	$comment=mysql_real_escape_string($comment);
 	$sql="INSERT INTO ".DB_LOG_TABLE." VALUES(NULL, {$now}, '{$name}', '{$comment}', {$ip})";
-	mysql_query($sql) or printError("えらーb ".mysql_error().$sql);
+	mysql_query($sql) or printError("sql error: 3");
 }
