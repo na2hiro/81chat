@@ -26,6 +26,14 @@ if(isset($_REQUEST['chalog'])){
                     'ip'=>(int)$row['ip']
             );
     }
+    
+    //件数数える
+    $sql="SELECT COUNT(*) as hoge FROM ".DB_LOG_TABLE;
+    $res=mysql_query($sql);
+    if($res==false) die(mysql_error());
+    $row=mysql_fetch_assoc($res);
+
+    $retarray['maxpage']=ceil((int)$row['hoge'] / CHALOG_PAGE);
 }else if(isset($_REQUEST['starttime']) || isset($_REQUEST['endtime'])){
     //日時指定
     $starttime=0;$endtime=time();
@@ -35,7 +43,13 @@ if(isset($_REQUEST['chalog'])){
     if(isset($_REQUEST['endtime'])){
         $starttime=(int)$_REQUEST['endtime'];
     }
-    $sql = "SELECT * FROM".DB_LOG_TABLE." WHERE {$starttime} <= date AND date <= {$endtime} ORDER BY id LIMIT ".LOG_MAX;
+    
+    $page=1;
+    if(isset($_REQUEST['page'])){
+        $page=((int)$_REQUEST['page']-1)*CHALOG_PAGE+1;
+    }
+    
+    $sql = "SELECT * FROM".DB_LOG_TABLE." WHERE {$starttime} <= date AND date <= {$endtime} ORDER BY id LIMIT {$page},".LOG_MAX;
     $res=mysql_query($sql);
     while ($row = mysql_fetch_assoc($res)) {
             $retarray['newcomments'][]=array(
@@ -45,6 +59,14 @@ if(isset($_REQUEST['chalog'])){
                     'ip'=>(int)$row['ip']
             );
     }
+    
+    //件数数える
+    $sql="SELECT COUNT(*) as hoge FROM ".DB_LOG_TABLE;
+    $res=mysql_query($sql);
+    if($res==false) die(mysql_error());
+    $row=mysql_fetch_assoc($res);
+
+    $retarray['maxpage']=ceil((int)$row['hoge'] / CHALOG_PAGE);
     
 }else{
     $retarray['error']=true;
