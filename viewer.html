@@ -176,7 +176,7 @@ function showLogs(whereq,judge){
 
 //取得
 function getPage(form){
-    var num=parseInt(form.elements["number"].value);
+    var num=parseInt(form.elements["page"].value);
     if(num<0)num=0;
 
     var newest=parseInt(sessionStorage.getItem("newest")),
@@ -188,16 +188,16 @@ function getPage(form){
     var min,max;  //min,max:ページ数
     
     if(newest==-1){
-        min=max=Math.ceil((lastid-num+1)/CHALOG_PAGE);
+        min=max=Math.floor(num/CHALOG_PAGE)+1;
         if(min<1){
             min=max=1;
         }
     }else if(num > newest){
-        max=Math.ceil((lastid-num+1)/CHALOG_PAGE);
-        min=Math.ceil((lastid-newest-1+1)/CHALOG_PAGE);
+        max=Math.floor(num/CHALOG_PAGE)+1;
+        min=Math.floor((newest+1)/CHALOG_PAGE);
     }else if(num < oldest){
-        max=Math.ceil((lastid-oldest+1+1)/CHALOG_PAGE);
-        min=Math.ceil((lastid-num+1)/CHALOG_PAGE);
+        max=Math.floor((oldest-1)/CHALOG_PAGE);
+        min=Math.ceil(num/CHALOG_PAGE);
     }else{
         return;
     }
