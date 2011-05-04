@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>chalog viewer</title>
+        <script type="text/javascript">
+
+TABLE_NAME = "chalogs";
+CHALOG_PAGE=5000;
+
+function LetsHTTP(){	//Let's HTTP!
+        var http = null;
+        try{
+                http = new XMLHttpRequest();
+        }catch(e){
+                try{
+                        http = new ActiveXObject("Msxml2.XMLHTTP");
+                }catch(e){
+                        try{
+                                http = new ActiveXObject("Microsoft.XMLHTTP");
+                        }catch(e){
+                                return null;
+                        }
+                }
+        }
+        return http;
+}
+var ld=openDatabase("chalogdatabase","1.0","chalogviewer",10*1024*1024);
+
+initDatabase();
+
+function initDatabase(){
+    ld.transaction(function(tx){
+        tx.executeSql("create table if not exists "+TABLE_NAME+" (id, name, comment, date, ip)");
+
+        infoNewest(tx);
+        var newest=parseInt(sessionStorage.getItem("newest"));
+        var oldest=parseInt(sessionStorage.getItem("oldest"));
+        
+        
+        request("lastid=lastid",function(res){
+            var obj;
+            try{
+                obj=JSON.parse(res);
+            }catch(e){
+                infoChange("パースエラー",res);
+                return;
+            }
+            infoChange("未取得件数",obj.lastid-newest+oldest);
+            sessionStorage.setItem("lastid",obj.lastid);
+        });
+    })
+}
+function infoNewest(tx){
+    //現在の保存済み件数取得
+    var newest_id=-1,oldest_id=-1;
+    tx.executeSql("select id from "+TABLE_NAME+" order by id desc limit 1",[],
+    function(tx,rs){
+        var rows=rs.rows;
+        if(rows.length==0){
+            newest_id=-1;
+        }else{
+            newest_id=rows.item(0).id;
+        }
+    });
+    tx.executeSql("select id from "+TABLE_NAME+" order by id asc limit 1",[],
+    function(tx,rs){
+        var rows=rs.rows;
+        if(rows.length==0){
+            oldest_id=-1;
+        }else{
+            oldest_id=rows.item(0).id;
+        }
+    });
+    sessionStorage.setItem("newest",newest_id);
+    sessionStorage.setItem("oldest",oldest_id);
+    if(newest_id==-1){
+        infoChange("取得済み","なし");
+    }else{
+        infoChange("取得済み","ID"+newest_id+"～"+oldest_id);
+    }
+}
+
+function request(send,func){
+    //chalog.phpへリクエスト
+    var http=LetsHTTP();
+    http.onreadystatechange=function(){
+        if(this.readystate==4 && this.status==200){
+            func(this.responseText);
+        }
+    }
+    http.open("POST","config.php",true);
+    http.setRequestHeader("Content-Type","application/x-www-form-urlencoded; charset=UTF-8");
+    http.send(send);
+}
+
+function infoChange(th,td){
+    var table=document.getElementById("info");
+    var row=findRowH(table,th);
+    if(row){
+        row.cells[1].textContent=td;
+    }else{
+        newRowH(table,th,td);
+    }
+    //最初の見出しがstrと一致する行を探す
+    function findRowH(table,str){
+        var rows=table.rows;
+        for(var i=0,l=rows.length;i<l;i++){
+            var r=rows[i];
+            var ths=document.getElementsByTagName("th");
+            if(ths.length==0)continue;
+            if(ths[0].textContent==str){
+                return ths[0];
+            }
+        }
+        return null;
+    }
+    //新しい見出し・値を作って挿入
+    function newRowH(table,th,td){
+        var row=table.insertRow(table.rows.length);
+        var eth=document.createElement("th");
+        eth.textContent=th;
+        row.appendChild(eth);
+        var etd=row.insertCell(1);
+        etd.textContent=td;
+    }
+}
+
+function showLogs(whereq,judge){
+    //whereq=where句 judge=より細かい条件を指定できる関数
+    if(!whereq)whereq="";
+    ld.transaction(callback);
+    
+    function callback(tx){
+        tx.executeSql(
+            "select * from "+TABLE_NAME+" "+whereq+" order by id",
+            [],
+            function(tx,rs){
+                var rows=rs.rows;
+                var log=document.getElementById("log");
+                for(var i=0,l=rows.length;i<l;i++){
+                    var row=rows.item(i);
+                    if(judge && !judge(row))continue;
+                    
+                    var ip=getIpByNum(parseInt(row.ip));
+                    var D=new Date(parseInt(row.date)*1000).formatTime();
+                    var colorna2=getColorByIp(ip);
+                    
+                    var dt=document.createElement("dt");
+                    dt.style.color=colorna2;
+                    dt.className="name";
+                    dt.textContent=row.name;
+                    
+                    var dd=document.createElement("dd");
+                    dd.style.color=colorna2;
+                    dd.innerHTML=[
+                            row.comment
+                                    .replace(/(http:\/\/gyazo.com\/[\x21\x23-\x3b\x3d-\x7e]+?\.png)/ig, "<a href=\"$1\" target='_blank'>[Gyazo]</a>")
+                                    .replace(/([^">])http(s?):\/\/([^\s\[<　]+)/gi, "$1<a href=\"http$2://$3\" target='_blank'>http$2://$3</a>")
+                                    .replace(/^http(s?):\/\/([^\s\[<　]+)/gi, "<a href=\"http$1://$2\" target='_blank'>http$1://$2</a>")
+                                    .replace(/\[small\](.+?)$/ig, "<small>$1</small>")
+                                    .replace(/\[math\]([ -~]+?)\[\/math\]/ig, "<img src=\"http://81.la/cgi-bin/mimetex.cgi?$1\" title=\"$1\" alt=\"$1\">")
+                                    .replace(/\[s\](.+?)\[\/s\]/ig, "<s>$1</s>")
+                                    .replace(/\[s\](.+?)$/ig, "<s>$1</s>")
+                                    .replace(/#0(\d)(\d\d)/ig, "<a href='/m/$1/$2.php' target='_blank'>#0$1$2</a>") 
+                                    .replace(/#([1-9]\d)(\d\d)/ig, "<a href='/m/$1/$2.php' target='_blank'>#$1$2</a>"),
+                            " <span class='small'>(",D,", ",ip.join("."),")</span>"
+                    ].join("");
+                    log.insertBefore(dd,log.firstChild);
+                    log.insertBefore(dt,dd);
+                }
+            }
+        );
+    }
+}
+
+//取得
+function getPage(form){
+    var num=parseInt(form.elements["number"].value);
+    if(num<0)num=0;
+
+    var newest=parseInt(sessionStorage.getItem("newest")),
+        oldest=parseInt(sessionStorage.getItem("oldest")),
+        lastid=parseInt(sessionStorage.getItem("lastid"));
+        
+    if(num>lastid)num=lastid;
+        
+    var min,max;  //min,max:ページ数
+    
+    if(newest==-1){
+        min=max=Math.ceil((lastid-num+1)/CHALOG_PAGE);
+        if(min<1){
+            min=max=1;
+        }
+    }else if(num > newest){
+        max=Math.ceil((lastid-num+1)/CHALOG_PAGE);
+        min=Math.ceil((lastid-newest-1+1)/CHALOG_PAGE);
+    }else if(num < oldest){
+        max=Math.ceil((lastid-oldest+1+1)/CHALOG_PAGE);
+        min=Math.ceil((lastid-num+1)/CHALOG_PAGE);
+    }else{
+        return;
+    }
+    
+    var i=max;
+    function nextReq(){
+        if(i<min){
+            //全部終了した
+            ld.transaction(function(tx){
+                infoNewest(tx);
+            });
+            return;
+        }
+        
+        request("chalog="+i,function(res){
+            var obj;
+            try{
+                obj=JSON.parse(res);
+            }catch(e){
+                infoChange("パースエラー",res);
+                return;
+            }
+            var arr=obj.newcomments;
+            ld.transaction(function(tx){
+                var fin_number=0;   //終了した数
+                var len=arr.length;
+                arr.forEach(function(y){
+                    tx.executeSql("insert into "+TABLE_NAME+" (id, name, comment, date, ip) values(?, ?, ?, ?, ?)",
+                        [y.id,y.name,y.comment,y.date,y.ip],
+                        function(){
+                            fin_number++;
+                            if(fin_number==len){
+                                //全部終了
+                                i--;
+                                nextReq();
+                            }
+                        }
+                    );
+                });
+            });
+
+        });
+    }
+}
+
+function chalogFind(form){
+    var whereq="";
+    if(form.elements["date_use"].cehcked){
+        var start=parseInt(form.elements["date_start"].valueAsNumber/1000),
+            end  =parseInt(form.elements["date_end"].valueAsNumber/1000);
+        if(isNaN(start)||isNaN(end))return;
+        
+        whereq+=" "+start+" <= date and date <= "+end;
+            
+    }
+    
+    showLogs(whereq?"where "+whereq:"",null);
+}
+
+
+
+
+//いろいろ
+function getIpByNum(num){
+    var ret=[];
+    for(var i=3; i>=0; i--){
+            ret[i]=num%256;
+            num=parseInt(num/256);
+    }
+    return ret;
+}
+function getColorByIp(ip){
+    return "rgb("+Math.floor(parseInt(ip[0])*0.75)+", "+
+                    Math.floor(parseInt(ip[1])*0.75)+", "+
+                    Math.floor(parseInt(ip[2])*0.75)+")";
+}
+String.prototype.mReplace = function(pat,flag){
+	var temp = this;
+	if(!flag){flag=""}
+	for(var i in pat){
+		var re = new RegExp(i,flag);
+		temp = temp.replace(re,pat[i])
+	}
+	return temp;
+};
+//日付の書式
+Date.prototype.format = "yyyy-mm-dd HH:MM:SS";
+Date.prototype.formatTime = function(format){
+	var yy;
+	var o = {
+		yyyy : ((yy = this.getYear()) < 2000)? yy+1900 : yy,
+		mm   : this.getMonth() + 1,
+		dd   : this.getDate(),
+		HH   : this.getHours(),
+		MM   : this.getMinutes(),
+		SS   : this.getSeconds()
+	}
+	for(var i in o){
+		if (o[i] < 10) o[i] = "0" + o[i];
+	}
+	return (format) ? format.mReplace(o) : this.format.mReplace(o);
+}
+        </script>
+    </head>
+    <body>
+        <h1>chalog viewer</h1>
+        <table id="info">
+            
+        </table>
+        <form name="controls">
+            <p>ID:<input type="number" name="page" min="0" step="5000" value="0">まで<button onclick="getPage(this.form)">取得</button></p>
+            <fieldset>
+                <legend>検索</legend>
+                <fieldset>
+                    <legend>日時指定</legend>
+                    <p><input type="checkbox" name="date_use"><input type="datetime-local" name="date_start">から<input type="datetime-local" name="date_end">まで</p>
+                </fieldset>
+                <p><button onclick="chalogFind(this.form)">検索</button></p>
+            </fieldset>
+        </form>
+        <div>
+            <dl id="log">
+            
+            </dl>
+        </div>
+    </body>
+</html>
