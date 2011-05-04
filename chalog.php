@@ -83,7 +83,7 @@ if(isset($_REQUEST['chalog'])){
 }
 $echo=json_encode($retarray);
 if($_REQUEST['callback']){
-	echo $_POST['callback']."(".$echo.")";
+	echo $_REQUEST['callback']."(".$echo.")";
 }else{
 	echo $echo;
 }
