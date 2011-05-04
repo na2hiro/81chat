@@ -308,14 +308,14 @@ Date.prototype.formatTime = function(format){
             
         </table>
         <form name="controls">
-            <p>ID:<input type="number" name="page" min="0" step="5000" value="0">まで<button onclick="getPage(this.form)">取得</button></p>
+            <p>ID:<input type="number" name="page" min="0" step="5000" value="0">まで<button onclick="getPage(this.form)" type="button">取得</button></p>
             <fieldset>
                 <legend>検索</legend>
                 <fieldset>
                     <legend>日時指定</legend>
                     <p><input type="checkbox" name="date_use"><input type="datetime-local" name="date_start">から<input type="datetime-local" name="date_end">まで</p>
                 </fieldset>
-                <p><button onclick="chalogFind(this.form)">検索</button></p>
+                <p><button onclick="chalogFind(this.form)" type="button">検索</button></p>
             </fieldset>
         </form>
         <div>
