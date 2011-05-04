@@ -15,11 +15,12 @@ $retarray['newcomments']=array();
 
 if(isset($_REQUEST['chalog'])){
     //件数指定
-    $start= ((int)$_REQUEST['chalog'] -1)*CHALOG_PAGE+1;
+    $start= ((int)$_REQUEST['chalog'] -1)*CHALOG_PAGE;
     $sql = "SELECT * FROM ".DB_LOG_TABLE." ORDER BY id LIMIT {$start},".CHALOG_PAGE;
     $res=mysql_query($sql);
     while ($row = mysql_fetch_assoc($res)) {
             $retarray['newcomments'][]=array(
+                    'id'=>$row['id'],
                     'name'=>$row['name'],
                     'comment'=>$row['comment'],
                     'date'=>(int)$row['date'],
@@ -46,13 +47,14 @@ if(isset($_REQUEST['chalog'])){
     
     $page=1;
     if(isset($_REQUEST['page'])){
-        $page=((int)$_REQUEST['page']-1)*CHALOG_PAGE+1;
+        $page=((int)$_REQUEST['page']-1)*CHALOG_PAGE;
     }
     
-    $sql = "SELECT * FROM".DB_LOG_TABLE." WHERE {$starttime} <= date AND date <= {$endtime} ORDER BY id LIMIT {$page},".LOG_MAX;
+    $sql = "SELECT * FROM ".DB_LOG_TABLE." WHERE {$starttime} <= date AND date <= {$endtime} ORDER BY id LIMIT {$page},".LOG_MAX;
     $res=mysql_query($sql);
     while ($row = mysql_fetch_assoc($res)) {
             $retarray['newcomments'][]=array(
+                    'id'=>$row['id'],
                     'name'=>$row['name'],
                     'comment'=>$row['comment'],
                     'date'=>(int)$row['date'],
@@ -68,6 +70,14 @@ if(isset($_REQUEST['chalog'])){
 
     $retarray['maxpage']=ceil((int)$row['hoge'] / CHALOG_PAGE);
     
+}else if(isset($_REQUEST['lastid'])){
+    //最後のIDを取得
+    $sql = "SELECT id FROM ".DB_LOG_TABLE." ORDER BY id DESC LIMIT 1";
+    $res=mysql_query($sql);
+    $row=mysql_fetch_assoc($res);
+    $lastid=(int)$row['id'];
+    
+    $retarray['lastid']=$lastid;
 }else{
     $retarray['error']=true;
 }
