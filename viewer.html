@@ -3,9 +3,27 @@
     <head>
         <meta charset="UTF-8">
         <title>chalog viewer</title>
+        <style type="text/css">
+            .name{
+                font-weight:bold;
+            }    
+            .small{
+                    font-size:smaller;
+                    color:#cccccc;
+            }
+            .name:after{
+                    content:">";
+                    font-weight:normal;
+            }
+            dt, dd{display:inline}
+            dd{margin-left:5px;}
+            dl{margin-top:0;margin-bottom:0}
+            dt~dt:before{content:"\a";white-space:pre}/*dtの後のdt*/
+            span.in{color:rgb(0, 0, 255)}
+            span.out{color:rgb(0, 0, 255);
+         </style>
         <script type="text/javascript">
 
-TABLE_NAME = "chalogs";
 CHALOG_PAGE=5000;
 
 function LetsHTTP(){	//Let's HTTP!
@@ -25,71 +43,49 @@ function LetsHTTP(){	//Let's HTTP!
         }
         return http;
 }
-var ld=openDatabase("chalogdatabase","1.0","chalogviewer",10*1024*1024);
+init();
 
-initDatabase();
-
-function initDatabase(){
-    ld.transaction(function(tx){
-        tx.executeSql("create table if not exists "+TABLE_NAME+" (id, name, comment, date, ip)");
-
-        infoNewest(tx);
-        var newest=parseInt(sessionStorage.getItem("newest"));
-        var oldest=parseInt(sessionStorage.getItem("oldest"));
-        
-        
-        request("lastid=lastid",function(res){
-            var obj;
-            try{
-                obj=JSON.parse(res);
-            }catch(e){
-                infoChange("パースエラー",res);
-                return;
-            }
-            infoChange("未取得件数",obj.lastid-newest+oldest);
-            sessionStorage.setItem("lastid",obj.lastid);
-        });
-    })
+function init(){
+    request("lastid=lastid",function(res){
+        var obj;
+        try{
+            obj=JSON.parse(res);
+        }catch(e){
+            infoChange("パースエラー",res);
+            return;
+        }
+        sessionStorage.setItem("lastid",obj.lastid);
+        infoNewest();
+    });
 }
-function infoNewest(tx){
+function deleteData(){
+    localStorage.clear();
+    infoNewest();
+}
+function infoNewest(){
     //現在の保存済み件数取得
-    var newest_id=-1,oldest_id=-1;
-    tx.executeSql("select id from "+TABLE_NAME+" order by id desc limit 1",[],
-    function(tx,rs){
-        var rows=rs.rows;
-        if(rows.length==0){
-            newest_id=-1;
-        }else{
-            newest_id=rows.item(0).id;
-        }
-    });
-    tx.executeSql("select id from "+TABLE_NAME+" order by id asc limit 1",[],
-    function(tx,rs){
-        var rows=rs.rows;
-        if(rows.length==0){
-            oldest_id=-1;
-        }else{
-            oldest_id=rows.item(0).id;
-        }
-    });
-    sessionStorage.setItem("newest",newest_id);
-    sessionStorage.setItem("oldest",oldest_id);
-    if(newest_id==-1){
+    
+    var newest_id=localStorage.getItem("newest");
+    var oldest_id=localStorage.getItem("oldest");
+    var lastid=parseInt(sessionStorage.getItem("lastid"));
+    if(newest_id==null || oldest_id==null){
         infoChange("取得済み","なし");
+        infoChange("未取得件数",lastid);
     }else{
         infoChange("取得済み","ID"+newest_id+"～"+oldest_id);
-    }
+        infoChange("未取得件数",lastid-parseInt(newest_id)+parseInt(oldest_id));
+     }
 }
 
 function request(send,func){
     //chalog.phpへリクエスト
     var http=LetsHTTP();
     http.onreadystatechange=function(){
-        if(this.readystate==4 && this.status==200){
+        if(this.readyState==4 && this.status==200){
             func(this.responseText);
         }
     }
-    http.open("POST","config.php",true);
+    http.open("POST","chalog.php",true);
     http.setRequestHeader("Content-Type","application/x-www-form-urlencoded; charset=UTF-8");
     http.send(send);
 }
@@ -107,10 +103,10 @@ function infoChange(th,td){
         var rows=table.rows;
         for(var i=0,l=rows.length;i<l;i++){
             var r=rows[i];
-            var ths=document.getElementsByTagName("th");
+            var ths=r.getElementsByTagName("th");
             if(ths.length==0)continue;
             if(ths[0].textContent==str){
-                return ths[0];
+                return r;
             }
         }
         return null;
@@ -126,51 +122,61 @@ function infoChange(th,td){
     }
 }
 
-function showLogs(whereq,judge){
-    //whereq=where句 judge=より細かい条件を指定できる関数
-    if(!whereq)whereq="";
-    ld.transaction(callback);
+function showLogs(judge,start,end){
+    //judge=判断関数
+    //ranger=検索範囲
     
-    function callback(tx){
-        tx.executeSql(
-            "select * from "+TABLE_NAME+" "+whereq+" order by id",
-            [],
-            function(tx,rs){
-                var rows=rs.rows;
-                var log=document.getElementById("log");
-                for(var i=0,l=rows.length;i<l;i++){
-                    var row=rows.item(i);
-                    if(judge && !judge(row))continue;
-                    
-                    var ip=getIpByNum(parseInt(row.ip));
-                    var D=new Date(parseInt(row.date)*1000).formatTime();
-                    var colorna2=getColorByIp(ip);
-                    
-                    var dt=document.createElement("dt");
-                    dt.style.color=colorna2;
-                    dt.className="name";
-                    dt.textContent=row.name;
-                    
-                    var dd=document.createElement("dd");
-                    dd.style.color=colorna2;
-                    dd.innerHTML=[
-                            row.comment
-                                    .replace(/(http:\/\/gyazo.com\/[\x21\x23-\x3b\x3d-\x7e]+?\.png)/ig, "<a href=\"$1\" target='_blank'>[Gyazo]</a>")
-                                    .replace(/([^">])http(s?):\/\/([^\s\[<　]+)/gi, "$1<a href=\"http$2://$3\" target='_blank'>http$2://$3</a>")
-                                    .replace(/^http(s?):\/\/([^\s\[<　]+)/gi, "<a href=\"http$1://$2\" target='_blank'>http$1://$2</a>")
-                                    .replace(/\[small\](.+?)$/ig, "<small>$1</small>")
-                                    .replace(/\[math\]([ -~]+?)\[\/math\]/ig, "<img src=\"http://81.la/cgi-bin/mimetex.cgi?$1\" title=\"$1\" alt=\"$1\">")
-                                    .replace(/\[s\](.+?)\[\/s\]/ig, "<s>$1</s>")
-                                    .replace(/\[s\](.+?)$/ig, "<s>$1</s>")
-                                    .replace(/#0(\d)(\d\d)/ig, "<a href='/m/$1/$2.php' target='_blank'>#0$1$2</a>") 
-                                    .replace(/#([1-9]\d)(\d\d)/ig, "<a href='/m/$1/$2.php' target='_blank'>#$1$2</a>"),
-                            " <span class='small'>(",D,", ",ip.join("."),")</span>"
-                    ].join("");
-                    log.insertBefore(dd,log.firstChild);
-                    log.insertBefore(dt,dd);
-                }
-            }
-        );
+    var pr= document.getElementById("my_pr");
+    start=start?start:parseInt(localStorage.getItem("oldest")),
+    end=end?end:parseInt(localStorage.getItem("newest"));
+        
+    pr.max=end-start+1;
+        
+    var log=document.getElementById("log");
+    var df=document.createDocumentFragment();
+    try{
+        for(var i=start;i<=end;i++){
+            var row={"id":i};
+            ["name","comment","date","ip"].forEach(function(y){
+                row[y]=String(localStorage.getItem(getKey(i,y)));
+            });
+            pr.value=i-start+1;
+            if(judge && !judge(row))continue;
+
+            var ip=getIpByNum(parseInt(row.ip));
+            var D=new Date(parseInt(row.date)*1000).formatTime();
+            var colorna2=getColorByIp(ip);
+
+            var dt=document.createElement("dt");
+            dt.style.color=colorna2;
+            dt.className="name";
+            dt.textContent=row.name;
+
+            var dd=document.createElement("dd");
+            dd.style.color=colorna2;
+            dd.innerHTML=[
+                    row.comment
+                            .replace(/(http:\/\/gyazo.com\/[\x21\x23-\x3b\x3d-\x7e]+?\.png)/ig, "<a href=\"$1\" target='_blank'>[Gyazo]</a>")
+                            .replace(/([^">])http(s?):\/\/([^\s\[<　]+)/gi, "$1<a href=\"http$2://$3\" target='_blank'>http$2://$3</a>")
+                            .replace(/^http(s?):\/\/([^\s\[<　]+)/gi, "<a href=\"http$1://$2\" target='_blank'>http$1://$2</a>")
+                            .replace(/\[small\](.+?)$/ig, "<small>$1</small>")
+                            .replace(/\[math\]([ -~]+?)\[\/math\]/ig, "<img src=\"http://81.la/cgi-bin/mimetex.cgi?$1\" title=\"$1\" alt=\"$1\">")
+                            .replace(/\[s\](.+?)\[\/s\]/ig, "<s>$1</s>")
+                            .replace(/\[s\](.+?)$/ig, "<s>$1</s>")
+                            .replace(/#0(\d)(\d\d)/ig, "<a href='/m/$1/$2.php' target='_blank'>#0$1$2</a>") 
+                            .replace(/#([1-9]\d)(\d\d)/ig, "<a href='/m/$1/$2.php' target='_blank'>#$1$2</a>"),
+                    " <span class='small'>(",D,", ",ip.join("."),")</span>"
+            ].join("");
+            df.insertBefore(dd,df.firstChild);
+            df.insertBefore(dt,dd);
+        }
+    }catch(e){
+        throw e;
+    }finally{
+        while(log.firstChild){
+            log.removeChild(log.firstChild);
+        }
+        log.appendChild(df);
     }
 }
 
@@ -179,9 +185,11 @@ function getPage(form){
     var num=parseInt(form.elements["page"].value);
     if(num<0)num=0;
 
-    var newest=parseInt(sessionStorage.getItem("newest")),
-        oldest=parseInt(sessionStorage.getItem("oldest")),
-        lastid=parseInt(sessionStorage.getItem("lastid"));
+    var newest=localStorage.getItem("newest"),
+        oldest=localStorage.getItem("oldest"),
+        lastid=sessionStorage.getItem("lastid");
+    newest= newest==null?-1:newest-0;
+    oldest= oldest==null?-1:oldest-0;
         
     if(num>lastid)num=lastid;
         
@@ -192,25 +200,30 @@ function getPage(form){
         if(min<1){
             min=max=1;
         }
+        oldest=lastid;
+        newest=-1;
     }else if(num > newest){
-        max=Math.floor(num/CHALOG_PAGE)+1;
-        min=Math.floor((newest+1)/CHALOG_PAGE);
+        max=Math.ceil(num/CHALOG_PAGE);
+        min=Math.ceil((newest+1)/CHALOG_PAGE);
     }else if(num < oldest){
-        max=Math.floor((oldest-1)/CHALOG_PAGE);
-        min=Math.ceil(num/CHALOG_PAGE);
+        max=Math.ceil((oldest-1)/CHALOG_PAGE);
+        min=Math.ceil((num+1)/CHALOG_PAGE);
     }else{
         return;
     }
+    if(min<1)min=1;
+    var pr= document.getElementById("my_pr");
     
     var i=max;
+    nextReq();
     function nextReq(){
         if(i<min){
             //全部終了した
-            ld.transaction(function(tx){
-                infoNewest(tx);
-            });
+            infoNewest();
             return;
         }
+        pr.max=CHALOG_PAGE;
+        pr.removeAttribute("value");
         
         request("chalog="+i,function(res){
             var obj;
@@ -221,44 +234,90 @@ function getPage(form){
                 return;
             }
             var arr=obj.newcomments;
-            ld.transaction(function(tx){
-                var fin_number=0;   //終了した数
-                var len=arr.length;
-                arr.forEach(function(y){
-                    tx.executeSql("insert into "+TABLE_NAME+" (id, name, comment, date, ip) values(?, ?, ?, ?, ?)",
-                        [y.id,y.name,y.comment,y.date,y.ip],
-                        function(){
-                            fin_number++;
-                            if(fin_number==len){
-                                //全部終了
-                                i--;
-                                nextReq();
-                            }
-                        }
-                    );
+            var l=localStorage;
+	    var nnewest=newest, ooldest=oldest;
+            arr.forEach(function(com,nownum){
+                if(oldest <= com.id && com.id <= newest){
+                    //既にある！
+                    return;
+                }
+                if(com.id < ooldest)ooldest=com.id;
+                if(nnewest < com.id)nnewest=com.id;
+                
+                ["name","comment","date","ip"].forEach(function(nm){
+                    l.setItem(getKey(com.id,nm),com[nm]);
                 });
+                pr.value=nownum;
             });
-
+            l.setItem("newest",nnewest);
+            l.setItem("oldest",ooldest);
+            infoNewest();
+            i--;
+            nextReq();
         });
     }
 }
 
 function chalogFind(form){
-    var whereq="";
-    if(form.elements["date_use"].cehcked){
-        var start=parseInt(form.elements["date_start"].valueAsNumber/1000),
-            end  =parseInt(form.elements["date_end"].valueAsNumber/1000);
-        if(isNaN(start)||isNaN(end))return;
+    if(form.elements["date_use"].checked){
+        var dstart=parseInt(form.elements["date_start"].valueAsNumber/1000)-9*60*60,
+            dend  =parseInt(form.elements["date_end"].valueAsNumber/1000)-9*60*60;
+        if(isNaN(dstart)||isNaN(dend))return;
         
-        whereq+=" "+start+" <= date and date <= "+end;
-            
+        var start=null,end=null;
+        
+        //データ中から範囲を絞り込む
+        //start
+        var ls=localStorage;
+        var newest=ls.getItem("newest")-0,oldest=ls.getItem("oldest")-0;
+        
+        var bef=newest; //1つ前
+        var nid = Math.floor((newest+oldest)/2);
+        while(true){
+            var rd=ls.getItem(getKey(nid,"date"))-0;
+            if(dstart<=rd){
+                //もっと前
+                bef=nid;
+                nid=Math.floor((oldest+nid)/2);
+            }else{
+                var rdn=ls.getItem(getKey(nid+1,"date"))-0;
+                if(dstart<=rdn){
+                    //ここだ！
+                    start=nid+1;
+                    break;
+                }
+                nid=Math.floor((nid+bef)/2);
+            }
+        }
+        //end
+        bef=oldest;
+        var nid=Math.floor((newest+oldest)/2);
+        
+        while(true){
+            var rd=ls.getItem(getKey(nid,"date"))-0;
+            if(rd<=dend){
+                //もっと後
+                bef=nid;
+                nid=Math.floor((newest+nid)/2);
+            }else{
+                var rdn=ls.getItem(getKey(nid-1,"date"))-0;
+                if(rdn<=dend){
+                    //ここだ！
+                    end=nid-1;
+                    break;
+                }
+                nid=Math.floor((nid+bef)/2);
+            }
+        }
     }
     
-    showLogs(whereq?"where "+whereq:"",null);
+    showLogs(null,start,end);
 }
 
-
-
+//localStorage用のキー
+function getKey(id,name){
+    return "uhyo/chalogs;"+id+"_"+name;
+}
 
 //いろいろ
 function getIpByNum(num){
@@ -283,6 +342,17 @@ String.prototype.mReplace = function(pat,flag){
 	}
 	return temp;
 };
+String.prototype.sqlEscape=function(){
+	var ret=this;
+	var r={"\\":"\\\\","\0":"\\0","\n":"\\n","\r":"\\r",
+               "'":"\\'",'"':'\\"',"\x1a":"\\Z"
+        };
+        for(var i in r){
+            ret=ret.split(i).join(r[i]);
+        }
+        return ret;
+};
+
 //日付の書式
 Date.prototype.format = "yyyy-mm-dd HH:MM:SS";
 Date.prototype.formatTime = function(format){
@@ -308,14 +378,17 @@ Date.prototype.formatTime = function(format){
             
         </table>
         <form name="controls">
-            <p>ID:<input type="number" name="page" min="0" step="5000" value="0">まで<button onclick="getPage(this.form)" type="button">取得</button></p>
+            <p>ID:<input type="number" name="page" min="0" step="5000" value="0">まで<button onclick="getPage(this.form)" type="button">取得</button>
+                <progress id="my_pr" value="0" max="1"></progress>
+            </p>
             <fieldset>
                 <legend>検索</legend>
                 <fieldset>
                     <legend>日時指定</legend>
-                    <p><input type="checkbox" name="date_use"><input type="datetime-local" name="date_start">から<input type="datetime-local" name="date_end">まで</p>
+                    <p><input type="checkbox" name="date_use" checked><input type="datetime-local" name="date_start" value="2011-05-01T00:00">から<input type="datetime-local" name="date_end" value="2011-05-02T00:00">まで</p>
                 </fieldset>
                 <p><button onclick="chalogFind(this.form)" type="button">検索</button></p>
+                <p><button onclick="deleteData()" type="button">データ消去</button></p>
             </fieldset>
         </form>
         <div>
