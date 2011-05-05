@@ -73,7 +73,7 @@ function infoNewest(){
         infoChange("未取得件数",lastid);
     }else{
         infoChange("取得済み","ID"+newest_id+"～"+oldest_id);
-        infoChange("未取得件数",lastid-parseInt(newest_id)+parseInt(oldest_id));
+        infoChange("未取得件数",(lastid-parseInt(newest_id)+parseInt(oldest_id))+"（最新:"+lastid+"）");
      }
 }
 
@@ -150,7 +150,7 @@ function showLogs(judge,start,end){
             var dt=document.createElement("dt");
             dt.style.color=colorna2;
             dt.className="name";
-            dt.textContent=row.name;
+            dt.innerHTML=row.name;
 
             var dd=document.createElement("dd");
             dd.style.color=colorna2;
