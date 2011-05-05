@@ -273,40 +273,48 @@ function chalogFind(form){
         
         var bef=newest; //1つ前
         var nid = Math.floor((newest+oldest)/2);
-        while(true){
-            var rd=ls.getItem(getKey(nid,"date"))-0;
-            if(dstart<=rd){
-                //もっと前
-                bef=nid;
-                nid=Math.floor((oldest+nid)/2);
-            }else{
-                var rdn=ls.getItem(getKey(nid+1,"date"))-0;
-                if(dstart<=rdn){
-                    //ここだ！
-                    start=nid+1;
-                    break;
+        if(dstart < ls.getItem(getKey(oldest,"date"))-0){
+            start=oldest;
+        }else{
+            while(true){
+                var rd=ls.getItem(getKey(nid,"date"))-0;
+                if(dstart<=rd){
+                    //もっと前
+                    bef=nid;
+                    nid=Math.floor((oldest+nid)/2);
+                }else{
+                    var rdn=ls.getItem(getKey(nid+1,"date"))-0;
+                    if(dstart<=rdn){
+                        //ここだ！
+                        start=nid+1;
+                        break;
+                    }
+                    nid=Math.floor((nid+bef)/2);
                 }
-                nid=Math.floor((nid+bef)/2);
             }
         }
         //end
         bef=oldest;
         var nid=Math.floor((newest+oldest)/2);
         
-        while(true){
-            var rd=ls.getItem(getKey(nid,"date"))-0;
-            if(rd<=dend){
-                //もっと後
-                bef=nid;
-                nid=Math.floor((newest+nid)/2);
-            }else{
-                var rdn=ls.getItem(getKey(nid-1,"date"))-0;
-                if(rdn<=dend){
-                    //ここだ！
-                    end=nid-1;
-                    break;
+        if(ls.getItem(getKey(newest,"date"))-0 < dend){
+            end=newest;
+        }else{
+            while(true){
+                var rd=ls.getItem(getKey(nid,"date"))-0;
+                if(rd<=dend){
+                    //もっと後
+                    bef=nid;
+                    nid=Math.floor((newest+nid)/2);
+                }else{
+                    var rdn=ls.getItem(getKey(nid-1,"date"))-0;
+                    if(rdn<=dend){
+                        //ここだ！
+                        end=nid-1;
+                        break;
+                    }
+                    nid=Math.floor((nid+bef)/2);
                 }
-                nid=Math.floor((nid+bef)/2);
             }
         }
     }
