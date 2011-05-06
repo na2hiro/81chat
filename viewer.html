@@ -219,7 +219,17 @@ function getPage(form){
     function nextReq(){
         if(i<min){
             //全部終了した
-            infoNewest();
+            request("lastid=lastid",function(res){
+                var obj;
+                try{
+                    obj=JSON.parse(res);
+                }catch(e){
+                    infoChange("パースエラー",res);
+                    return;
+                }
+                sessionStorage.setItem("lastid",obj.lastid);
+                infoNewest();
+            });
             return;
         }
         pr.max=CHALOG_PAGE;

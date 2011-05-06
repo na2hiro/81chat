@@ -35,6 +35,7 @@ if(isset($_REQUEST['chalog'])){
     $row=mysql_fetch_assoc($res);
 
     $retarray['maxpage']=ceil((int)$row['hoge'] / CHALOG_PAGE);
+    $retarray['lastid']=(int)$row['hoge'];
 }else if(isset($_REQUEST['starttime']) || isset($_REQUEST['endtime'])){
     //日時指定
     $starttime=0;$endtime=time();
