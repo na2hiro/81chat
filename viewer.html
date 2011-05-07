@@ -20,7 +20,7 @@
             dl{margin-top:0;margin-bottom:0}
             dt~dt:before{content:"\a";white-space:pre}/*dtの後のdt*/
             span.in{color:rgb(0, 0, 255)}
-            span.out{color:rgb(0, 0, 255);
+            span.out{color:rgb(0, 0, 255);}
          </style>
         <script type="text/javascript">
 
@@ -59,7 +59,8 @@ function init(){
     });
 }
 function deleteData(){
-    localStorage.clear();
+    var ls=localStorage;
+    
     infoNewest();
 }
 function infoNewest(){
@@ -73,7 +74,7 @@ function infoNewest(){
         infoChange("未取得件数",lastid);
     }else{
         infoChange("取得済み","ID"+newest_id+"～"+oldest_id);
-        infoChange("未取得件数",(lastid-parseInt(newest_id)+parseInt(oldest_id))+"（最新:"+lastid+"）");
+        infoChange("未取得件数",(lastid-parseInt(newest_id)+parseInt(oldest_id)-1)+"（最新:"+lastid+"）");
      }
 }
 
@@ -328,8 +329,39 @@ function chalogFind(form){
             }
         }
     }
+    var funcs=[];
+    if(form.elements["person_use"].checked){
+        //人物
+        var mode="";
+        var es=form.elements["person_use_t"];
+        for(var i=0,l=es.length;i<l;i++){
+            if(es[i].checked){
+                mode=es[i].value;
+                break;
+            }
+        }
+        if(mode=="ip"){
+            var ip_number=getNumByIp(form.elements["person_ip"].value);
+            funcs.push(function(row){
+                return row.ip==ip_number;
+            });
+        }else if(mode=="name"){
+            var name=form.elements["person_name"].value;
+            funcs.push(function(row){
+                return row.name.indexOf(name)>=0;
+            });
+        }
+    }
+    var f=null;
+    if(funcs.length){
+        f=function(row){
+            return funcs.every(function(fs){
+                return fs(row);
+            });
+        };
+    }
     
-    showLogs(null,start,end);
+    showLogs(f,start,end);
 }
 
 //localStorage用のキー
@@ -338,6 +370,16 @@ function getKey(id,name){
 }
 
 //いろいろ
+function getNumByIp(ip){
+    if(!(ip instanceof Array)){
+        ip=ip.split(".");
+    }
+    var ret=0;
+    ip.forEach(function(n){
+        ret=(ret<<8)+parseInt(n);
+    });
+    return ret;
+}
 function getIpByNum(num){
     var ret=[];
     for(var i=3; i>=0; i--){
@@ -404,6 +446,13 @@ Date.prototype.formatTime = function(format){
                 <fieldset>
                     <legend>日時指定</legend>
                     <p><input type="checkbox" name="date_use" checked><input type="datetime-local" name="date_start" value="2011-05-01T00:00">から<input type="datetime-local" name="date_end" value="2011-05-02T00:00">まで</p>
+                </fieldset>
+                <fieldset>
+                    <legend>人物指定</legend>
+                    <p><input type="checkbox" name="person_use" checked>
+                       <label><input type="radio" name="person_use_t" value="ip" checked>IPアドレス:</label><input type="text" name="person_ip" value="">
+                       <label><input type="radio" name="person_use_t" value="name">名前:</label><input type="text" name="person_name" value="">
+                    </p>
                 </fieldset>
                 <p><button onclick="chalogFind(this.form)" type="button">検索</button></p>
                 <p><button onclick="deleteData()" type="button">データ消去</button></p>
