@@ -60,7 +60,13 @@ function init(){
 }
 function deleteData(){
     var ls=localStorage;
-    
+    var i=parseInt(ls.getItem("oldest"));
+    var max=parseInt(ls.getItem("newest"));
+    for(;i<=max;i++){
+        ["name","comment","date","ip"].forEach(function(k){
+            ls.removeItem(getKey(i,k));
+        });
+    }
     infoNewest();
 }
 function infoNewest(){
@@ -127,58 +133,143 @@ function showLogs(judge,start,end){
     //judge=判断関数
     //ranger=検索範囲
     
+    var find_result=[]; //検索結果
+    var find_l=0;
+    
     var pr= document.getElementById("my_pr");
     start=start?start:parseInt(localStorage.getItem("oldest")),
     end=end?end:parseInt(localStorage.getItem("newest"));
+    
+    var page_number=parseInt(document.getElementById("page_number").value);
         
     pr.max=end-start+1;
         
     var log=document.getElementById("log");
     var df=document.createDocumentFragment();
+    var df_flg=false;
     try{
-        for(var i=start;i<=end;i++){
+        for(var i=end;i>=start;i--){
             var row={"id":i};
             ["name","comment","date","ip"].forEach(function(y){
                 row[y]=String(localStorage.getItem(getKey(i,y)));
             });
-            pr.value=i-start+1;
+            pr.value=end-i+1;
             if(judge && !judge(row))continue;
+            
+            find_result[find_l++]=i;
+            
+            if(find_l>=page_number){
+                if(!df_flg){
+                    while(log.firstChild){
+                        log.removeChild(log.firstChild);
+                    }
+                    log.appendChild(df);
+                    df_flg=true;
+                }
+                continue;
+            }
 
-            var ip=getIpByNum(parseInt(row.ip));
-            var D=new Date(parseInt(row.date)*1000).formatTime();
-            var colorna2=getColorByIp(ip);
-
-            var dt=document.createElement("dt");
-            dt.style.color=colorna2;
-            dt.className="name";
-            dt.innerHTML=row.name;
-
-            var dd=document.createElement("dd");
-            dd.style.color=colorna2;
-            dd.innerHTML=[
-                    row.comment
-                            .replace(/(http:\/\/gyazo.com\/[\x21\x23-\x3b\x3d-\x7e]+?\.png)/ig, "<a href=\"$1\" target='_blank'>[Gyazo]</a>")
-                            .replace(/([^">])http(s?):\/\/([^\s\[<　]+)/gi, "$1<a href=\"http$2://$3\" target='_blank'>http$2://$3</a>")
-                            .replace(/^http(s?):\/\/([^\s\[<　]+)/gi, "<a href=\"http$1://$2\" target='_blank'>http$1://$2</a>")
-                            .replace(/\[small\](.+?)$/ig, "<small>$1</small>")
-                            .replace(/\[math\]([ -~]+?)\[\/math\]/ig, "<img src=\"http://81.la/cgi-bin/mimetex.cgi?$1\" title=\"$1\" alt=\"$1\">")
-                            .replace(/\[s\](.+?)\[\/s\]/ig, "<s>$1</s>")
-                            .replace(/\[s\](.+?)$/ig, "<s>$1</s>")
-                            .replace(/#0(\d)(\d\d)/ig, "<a href='/m/$1/$2.php' target='_blank'>#0$1$2</a>") 
-                            .replace(/#([1-9]\d)(\d\d)/ig, "<a href='/m/$1/$2.php' target='_blank'>#$1$2</a>"),
-                    " <span class='small'>(",D,", ",ip.join("."),")</span>"
-            ].join("");
-            df.insertBefore(dd,df.firstChild);
-            df.insertBefore(dt,dd);
+            pushNewRow(row,df);
         }
     }catch(e){
         throw e;
     }finally{
-        while(log.firstChild){
-            log.removeChild(log.firstChild);
+        if(!df_flg){
+            while(log.firstChild){
+                log.removeChild(log.firstChild);
+            }
+            log.appendChild(df);
         }
-        log.appendChild(df);
+        
+        sessionStorage.setItem("find_result",find_result.join(","));
+        sessionStorage.setItem("find_result_number",find_result.length);
+        
+        sessionStorage.setItem("find_page","0");
+        pager();
     }
+}
+function pager(){
+    var p=parseInt(sessionStorage.getItem("find_page"));
+    var page_number=parseInt(document.getElementById("page_number").value);
+    if(page_number<=0)return;
+    if(parseInt(sessionStorage.getItem("find_result_number"))<=0)return;
+    var page_max = Math.ceil(parseInt(sessionStorage.getItem("find_result_number"))/page_number)-1;
+    
+    
+    var form=document.getElementById("pager");
+    var prev=form.elements["page_prev"];
+    prev.disabled = p<=0;
+    var next=form.elements["page_next"];
+    next.disabled = p>=page_max;
+    
+    document.getElementById("find_now_page").textContent=p+"/"+page_max;
+    
+}
+function find_page(step){
+    var p=parseInt(sessionStorage.getItem("find_page"));
+    var page_number=parseInt(document.getElementById("page_number").value);
+    if(page_number<=0)return;
+    if(parseInt(sessionStorage.getItem("find_result_number"))<=0)return;
+    var page_max = Math.ceil(parseInt(sessionStorage.getItem("find_result_number"))/page_number)-1;
+
+    p+=step;
+    if(p<0)p=0;
+    if(p>page_max)p=page_max;
+    sessionStorage.setItem("find_page",p);
+    
+    var log=document.getElementById("log");
+    var df=document.createDocumentFragment();
+    var find_result=sessionStorage.getItem("find_result").split(",");
+    var l = find_result.length;
+    var end=p*page_number+page_number;
+    
+    pager();
+    for(var i=p*page_number;i<end;i++){
+        if(i>=l)break;
+        var id=find_result[i];
+        
+        var row={"id":id};
+        ["name","comment","date","ip"].forEach(function(k){
+            row[k]=String(localStorage.getItem(getKey(id,k)));
+        });
+        pushNewRow(row,df);
+    }
+    while(log.firstChild){
+        log.removeChild(log.firstChild);
+    }
+    log.appendChild(df);
+
+}
+//その行をdfに追加
+function pushNewRow(row,df){
+    var ip=getIpByNum(parseInt(row.ip));
+    var D=new Date(parseInt(row.date)*1000).formatTime();
+    var colorna2=getColorByIp(ip);
+
+    var dt=document.createElement("dt");
+    dt.style.color=colorna2;
+    dt.className="name";
+    dt.innerHTML=row.name;
+
+    var dd=document.createElement("dd");
+    dd.style.color=colorna2;
+    dd.innerHTML=[
+            row.comment
+                    .replace(/(http:\/\/gyazo.com\/[\x21\x23-\x3b\x3d-\x7e]+?\.png)/ig, "<a href=\"$1\" target='_blank'>[Gyazo]</a>")
+                    .replace(/([^">])http(s?):\/\/([^\s\[<　]+)/gi, "$1<a href=\"http$2://$3\" target='_blank'>http$2://$3</a>")
+                    .replace(/^http(s?):\/\/([^\s\[<　]+)/gi, "<a href=\"http$1://$2\" target='_blank'>http$1://$2</a>")
+                    .replace(/\[small\](.+?)$/ig, "<small>$1</small>")
+                    .replace(/\[math\]([ -~]+?)\[\/math\]/ig, "<img src=\"http://81.la/cgi-bin/mimetex.cgi?$1\" title=\"$1\" alt=\"$1\">")
+                    .replace(/\[s\](.+?)\[\/s\]/ig, "<s>$1</s>")
+                    .replace(/\[s\](.+?)$/ig, "<s>$1</s>")
+                    .replace(/#0(\d)(\d\d)/ig, "<a href='/m/$1/$2.php' target='_blank'>#0$1$2</a>") 
+                    .replace(/#([1-9]\d)(\d\d)/ig, "<a href='/m/$1/$2.php' target='_blank'>#$1$2</a>"),
+            " <span class='small'>(",D,", ",ip.join("."),")</span>"
+    ].join("");
+    //df.insertBefore(dd,df.firstChild);
+    //df.insertBefore(dt,dd);
+    df.appendChild(dt);
+    df.appendChild(dd);
 }
 
 //取得
@@ -443,13 +534,14 @@ Date.prototype.formatTime = function(format){
             </p>
             <fieldset>
                 <legend>検索</legend>
+                <p><label>1ページに表示する件数：<input type="number" name="page_number" id="page_number" value="1000" step="100" min="100"></label></p>
                 <fieldset>
                     <legend>日時指定</legend>
                     <p><input type="checkbox" name="date_use" checked><input type="datetime-local" name="date_start" value="2011-05-01T00:00">から<input type="datetime-local" name="date_end" value="2011-05-02T00:00">まで</p>
                 </fieldset>
                 <fieldset>
                     <legend>人物指定</legend>
-                    <p><input type="checkbox" name="person_use" checked>
+                    <p><input type="checkbox" name="person_use">
                        <label><input type="radio" name="person_use_t" value="ip" checked>IPアドレス:</label><input type="text" name="person_ip" value="">
                        <label><input type="radio" name="person_use_t" value="name">名前:</label><input type="text" name="person_name" value="">
                     </p>
@@ -459,6 +551,9 @@ Date.prototype.formatTime = function(format){
             </fieldset>
         </form>
         <div>
+            <form name="pager" id="pager">
+                <p><button onclick="find_page(-1)" name="page_prev" type="button" disabled>前のページ</button> <button onclick="find_page(1)" name="page_next" type="button" disabled>次のページ</button> | 現在のページ：<span id="find_now_page"></span></p>
+            </form>
             <dl id="log">
             
             </dl>
