@@ -420,6 +420,9 @@ function chalogFind(form){
             }
         }
     }
+    
+    document.getElementById("find_status").textContent="範囲:"+start+"～"+end;
+    
     var funcs=[];
     if(form.elements["person_use"].checked){
         //人物
@@ -443,6 +446,21 @@ function chalogFind(form){
             });
         }
     }
+    if(form.elements["comment_use"].checked){
+        //本文
+        var find=form.elements["comment_comment"].value;
+        if(form.elements["comment_use_regexp"].checked){
+            find=new RegExp(find);
+            funcs.push(function(row){
+                return find.test(row.comment);
+            });
+        }else{
+            funcs.push(function(row){
+                return row.comment.indexOf(find)>=0;
+            });
+        }
+    }
+    
     var f=null;
     if(funcs.length){
         f=function(row){
@@ -546,8 +564,16 @@ Date.prototype.formatTime = function(format){
                        <label><input type="radio" name="person_use_t" value="name">名前:</label><input type="text" name="person_name" value="">
                     </p>
                 </fieldset>
+                <fieldset>
+                    <legend>本文検索</legend>
+                    <p><input type="checkbox" name="comment_use">
+                        <label>検索語：<input type="search" name="comment_comment" value=""></label>
+                        <label><input type="checkbox" name="comment_use_regexp">正規表現</label>
+                    </p>
+                </fieldset>
                 <p><button onclick="chalogFind(this.form)" type="button">検索</button></p>
                 <p><button onclick="deleteData()" type="button">データ消去</button></p>
+                <p id="find_status"></p>
             </fieldset>
         </form>
         <div>
