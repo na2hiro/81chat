@@ -31,7 +31,7 @@ if($myid!=NULL){
 }
 
 if(isset($_POST['login'])){
-	$name=htmlspecialchars($_POST['login']);
+	$name=utf84byte(htmlspecialchars($_POST['login']));
 	if($name=="") printError("name must not be empty");
 	$ua=mysql_real_escape_string($_SERVER['HTTP_USER_AGENT']);
 	$ips=explode(".", $_SERVER["REMOTE_ADDR"]);
@@ -64,7 +64,7 @@ if(isset($_POST['login'])){
 	$row = mysql_fetch_assoc($res);
 	if($row==false) printError("please log in");
 
-	comment($row['name'], htmlspecialchars($_POST['comment']), $row['ip']);
+	comment($row['name'], utf84byte(htmlspecialchars($_POST['comment'])), $row['ip']);
 }else if(isset($_REQUEST['chalog'])){
 	if(!is_numeric($_REQUEST['chalog'])) printError("chalog must be numeric.");
 }else{
@@ -164,4 +164,12 @@ function comment($name, $comment, $ip){
 	$comment=mysql_real_escape_string($comment);
 	$sql="INSERT INTO ".DB_LOG_TABLE." VALUES(NULL, {$now}, '{$name}', '{$comment}', {$ip})";
 	mysql_query($sql) or printError("sql error: 3");
+}
+function utf84byte($str){
+    $encode=mb_internal_encoding();
+    $ret= preg_replace_callback("/([\\xF0-\\xF7])([\\x80-\\xBF])([\\x80-\\xBF])([\\x80-\\xBF])/",function ($match){
+	    $unicode = ((ord($match[1])&7)<<18)|((ord($match[2])&63)<<12)|((ord($match[3])&63)<<12)|(ord($match[4])&63);
+	    return "&#x".dechex($unicode).";";
+	},$str);
+    return $ret;
 }
