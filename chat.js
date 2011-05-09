@@ -42,6 +42,7 @@ HighChat.prototype={
 		this.SetCookie("volume_chat", value);
 		this.sound.volume=value*0.01;
 	},
+        startid: null,  //最も古いログのid
 	lastid: null,
 	userdata: {},
 	userlist: [],
@@ -86,7 +87,7 @@ HighChat.prototype={
 		if(obj.error!=false){
 			this.gid("status").innerHTML="エラー! "+obj.errormessage;
 		}
-		this.write(obj.newcomments);
+		this.write(obj.newcomments,!!obj.motto);
 		this.lastid=obj.lastid;
 		this.userlist=obj.userlist;
 		if(obj.myid==null){
@@ -141,8 +142,12 @@ HighChat.prototype={
 				Math.floor(parseInt(ip[2])*0.75)+")";
 	},
 
-	write: function(comments){
+        //mode:falseなら従来通り（上に付け足し）　trueならもっと読むモード（下に付け足し）
+	write: function(comments,mode){
 		if(comments.length==0)return;
+                if(this.startid==null || this.startid>comments[0].id)this.startid=comments[0].id;
+                if(mode)comments=comments.reverse();
+                
 		for(var i=0, l=comments.length;i<l;i++){
 			var line=comments[i];
 			var ip=this.getIpByNum(line.ip);
@@ -174,8 +179,15 @@ HighChat.prototype={
 				" <span class='small'>(",D,", ",ip,")</span>"
 			].join("");
 
-			this.gid("log").insertBefore(newline2,this.gid("log").firstChild);
-			this.gid("log").insertBefore(newline1,this.gid("log").firstChild);
+                        if(!mode){
+                            //上に付け足し
+                            this.gid("log").insertBefore(newline2,this.gid("log").firstChild);
+                            this.gid("log").insertBefore(newline1,this.gid("log").firstChild);
+                        }else{
+                            //下に付け足し
+                            this.gid("log").appendChild(newline1);
+                            this.gid("log").appendChild(newline2);
+                        }
 		}
 		this.sound.play();
 	},
@@ -225,6 +237,10 @@ HighChat.prototype={
 			});
 		}
 	},
+        //もっと読む
+        motto: function(){
+            this.submit("motto="+this.startid);
+        },
 	login: function(name){
 		if(name!=null) document.f2.n.value=name;
 		document.f2.n.disabled = true;		//フォーム名前
