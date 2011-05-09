@@ -167,7 +167,7 @@ function comment($name, $comment, $ip){
 }
 function utf84byte($str){
     $ret= preg_replace_callback("/([\\xF0-\\xF7])([\\x80-\\xBF])([\\x80-\\xBF])([\\x80-\\xBF])/",function ($match){
-	    $unicode = ((ord($match[1])&7)<<18)|((ord($match[2])&63)<<12)|((ord($match[3])&63)<<12)|(ord($match[4])&63);
+	    $unicode = ((ord($match[1])&7)<<18)|((ord($match[2])&63)<<12)|((ord($match[3])&63)<<6)|(ord($match[4])&63);
 	    return "&#x".dechex($unicode).";";
 	},$str);
     return $ret;
