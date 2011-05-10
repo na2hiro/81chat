@@ -88,6 +88,7 @@ HighChat.prototype={
 			this.gid("status").innerHTML="エラー! "+obj.errormessage;
 		}
 		this.write(obj.newcomments,!!obj.motto);
+                if(this.startid>obj.startid)this.startid=obj.startid;
 		this.lastid=obj.lastid;
 		this.userlist=obj.userlist;
 		if(obj.myid==null){
@@ -146,7 +147,6 @@ HighChat.prototype={
         //mode:falseなら従来通り（上に付け足し）　trueならもっと読むモード（下に付け足し）
 	write: function(comments,mode){
 		if(comments.length==0)return;
-                if(this.startid==null || this.startid>comments[0].id)this.startid=comments[0].id;
                 if(mode)comments=comments.reverse();
                 
 		for(var i=0, l=comments.length;i<l;i++){
