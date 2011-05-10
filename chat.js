@@ -118,10 +118,11 @@ HighChat.prototype={
 		this.lastObj=obj;
 	},
 
-	submit: function(send, func){
+	submit: function(send, func,to){    //to:送り先
 		var http = this.LetsHTTP();
 		http.parent=this;
 		if(!http)return;
+                if(!to)to="chat.php";
 
 		http.onreadystatechange = func || function(){
 			if(this.readyState == 4 && this.status == 200){
@@ -129,7 +130,7 @@ HighChat.prototype={
 			}
 		};
 		http.parent=this;
-		http.open("POST", "chat.php", true);
+		http.open("POST", to, true);
 		http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
 		var send2=send+"&userlist="+JSON.stringify(this.userlist)+"&last="+this.lastid;
 //		alert(send2)
@@ -239,7 +240,7 @@ HighChat.prototype={
 	},
         //もっと読む
         motto: function(){
-            this.submit("motto="+this.startid);
+            this.submit("motto="+this.startid,null,"chalog.php");
         },
 	login: function(name){
 		if(name!=null) document.f2.n.value=name;
