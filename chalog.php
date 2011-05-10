@@ -5,6 +5,7 @@ require("pass.php");
 define("LOG_MAX",10000);
 define("CHALOG_PAGE",5000); //chalogで1ページあたりの件数
 define("DB_LOG_TABLE", "testchat");
+define("CHALOG_MOTTO",100); //「もっと読む」時の追加ログ
 
 $conn = mysql_connect('localhost', DB_USER, DB_PASS) or die(mysql_error());
 mysql_select_db('chat') or die(mysql_error());
@@ -79,13 +80,42 @@ if(isset($_REQUEST['chalog'])){
     $lastid=(int)$row['id'];
     
     $retarray['lastid']=$lastid;
+}else if(isset($_REQUEST['motto'])){
+    //最後のidを指定すれば　そこから一定数のログを追加取得
+    if(!is_numeric($_REQUEST['motto']))printError("wrong motto!");
+    $la=(int)$_REQUEST['motto'];
+    $st_id = $la-CHALOG_MOTTO;  //はじめ
+    
+    $sql = "SELECT * FROM ".DB_LOG_TABLE." WHERE {$st_id} <= id  ORDER BY id LIMIT ".CHALOG_MOTTO;
+    $res=mysql_query($sql);
+    while ($row = mysql_fetch_assoc($res)) {
+            $retarray['newcomments'][]=array(
+                    'id'=>$row['id'],
+                    'name'=>$row['name'],
+                    'comment'=>$row['comment'],
+                    'date'=>(int)$row['date'],
+                    'ip'=>(int)$row['ip']
+            );
+    }
+    $retarray["motto"]="motto";
+    
 }else{
-    $retarray['error']=true;
+    printError("no command");
 }
 $echo=json_encode($retarray);
 if($_REQUEST['callback']){
 	echo $_REQUEST['callback']."(".$echo.")";
 }else{
 	echo $echo;
+}
+
+function printError($message){
+	$echo=json_encode(Array('error'=>true, 'errormessage'=>$message));
+	if($_POST['callback']){
+		echo $_POST['callback']."(".$echo.")";
+	}else{
+		echo $echo;
+	}
+	exit;
 }
 ?>
