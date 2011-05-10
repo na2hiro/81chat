@@ -87,10 +87,10 @@ HighChat.prototype={
 		if(obj.error!=false){
 			this.gid("status").innerHTML="エラー! "+obj.errormessage;
 		}
-		this.write(obj.newcomments,!!obj.motto);
-                if(this.startid>obj.startid)this.startid=obj.startid;
-		this.lastid=obj.lastid;
-		this.userlist=obj.userlist;
+		this.write(obj.newcomments);
+                if(!this.startid || this.startid>obj.startid)this.startid=obj.startid;
+                this.lastid=obj.lastid;
+                this.userlist=obj.userlist;
 		if(obj.myid==null){
 			if(this.loginid!=null){//自分のidが入っててnullが与えられた場合はログアウト
 				this.loginid=null;
@@ -240,8 +240,30 @@ HighChat.prototype={
 	},
         //もっと読む
         motto: function(){
-            this.submit("motto="+this.startid,null,"chalog.php");
+            var th=this;
+            if(!this.startid)return;
+            this.submit("motto="+this.startid, function(){
+                if(this.readyState == 4 && this.status == 200){
+                        this.parent.mottoResponse(this.responseText);
+                }
+            },"chalog.php");
+            
+           
         },
+        //もっと読む用レスポンスを返す
+        mottoResponse:function(responseText){
+		try{
+			var obj=JSON.parse(responseText);
+		}catch(e){
+			alert("パースエラー: "+responseText);
+			return;
+		}
+		if(obj.error!=false){
+			this.gid("status").innerHTML="エラー! "+obj.errormessage;
+		}
+		this.write(obj.newcomments,true);
+                if(!this.startid || this.startid>obj.startid)this.startid=obj.startid;
+	},
 	login: function(name){
 		if(name!=null) document.f2.n.value=name;
 		document.f2.n.disabled = true;		//フォーム名前
