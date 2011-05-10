@@ -96,8 +96,11 @@ if(isset($_REQUEST['chalog'])){
                     'date'=>(int)$row['date'],
                     'ip'=>(int)$row['ip']
             );
+            $id=$row['id'];
     }
     $retarray["motto"]="motto";
+    $retarray["startid"]=$st_id;
+    $retarray["lastid"]=(int)$id;
     
 }else{
     printError("no command");

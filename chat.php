@@ -130,6 +130,7 @@ $retarray['myid']=$myid;
 $sql="SELECT * FROM ".DB_LOG_TABLE." WHERE id > {$id} ORDER BY id LIMIT ".LOG_MAX;
 $res=mysql_query($sql);
 $retarray['newcomments']=array();
+$sid="";
 while ($row = mysql_fetch_assoc($res)) {
 	$retarray['newcomments'][]=array(
 		'name'=>$row['name'],
@@ -138,8 +139,12 @@ while ($row = mysql_fetch_assoc($res)) {
 		'ip'=>(int)$row['ip']
 	);
 	$id=$row['id'];
+        if($sid==""){
+            $sid=$row['id'];
+        }
 }
 $retarray['sessionid']=session_id();
+$retarray['startid']=(int)$sid;
 $retarray['lastid']=(int)$id;
 $echo=json_encode($retarray);
 if($_POST['callback']){
