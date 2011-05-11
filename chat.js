@@ -88,7 +88,7 @@ HighChat.prototype={
 			this.gid("status").innerHTML="エラー! "+obj.errormessage;
 		}
 		this.write(obj.newcomments);
-                if(!this.startid || this.startid>obj.startid)this.startid=obj.startid;
+                if(!this.startid || (obj.startid && this.startid>obj.startid))this.startid=obj.startid;
                 this.lastid=obj.lastid;
                 this.userlist=obj.userlist;
 		if(obj.myid==null){
