@@ -31,6 +31,7 @@ if($myid!=NULL){
 }
 
 if(isset($_POST['login'])){
+	checkreferer();
 	$name=utf84byte(htmlspecialchars($_POST['login']));
 	if($name=="") printError("name must not be empty");
 	$ua=mysql_real_escape_string($_SERVER['HTTP_USER_AGENT']);
@@ -44,6 +45,7 @@ if(isset($_POST['login'])){
 	comment("<span class='in'>■入室通知</span>", "「".$name."」さんが入室", $ip);
 
 }else if(isset($_POST['logout']) && $myid!=NULL){
+	checkreferer();
 	$sql="SELECT ip, name FROM ".DB_USER_TABLE." WHERE id = {$myid}";
 	$res=mysql_query($sql);
 	$row = mysql_fetch_assoc($res);
@@ -57,6 +59,7 @@ if(isset($_POST['login'])){
 	comment("<span class='out'>■退室通知</span>", "「".$name."」さんが退室", $ip);
 
 }else if(isset($_POST['comment'])){
+	checkreferer();
 	if($myid==NULL) printError("please log in");
 	if(!is_numeric($myid)) printError("userid is wrong");
 	$sql="SELECT name, ip FROM ".DB_USER_TABLE." WHERE id = {$myid}";
@@ -65,15 +68,7 @@ if(isset($_POST['login'])){
 	if($row==false) printError("please log in");
 
 	comment($row['name'], utf84byte(htmlspecialchars($_POST['comment'])), $row['ip']);
-}else if(isset($_REQUEST['chalog'])){
-	if(!is_numeric($_REQUEST['chalog'])) printError("chalog must be numeric.");
-}else{
-	$noWrite=true;
 }
-if(!$noWrite){
-	if(!preg_match('/^http\:\/\/81\.la\/c/', $_SERVER['HTTP_REFERER'])) printError("referer must be 81.la/c: ".$_SERVER['HTTP_REFERER']);
-}
-
 if($myid!=NULL){
 	$sql="UPDATE ".DB_USER_TABLE." SET last = {$now} WHERE id = {$myid}";
 	mysql_query($sql) or printError("sql error: 2");
@@ -176,4 +171,7 @@ function utf84byte($str){
 	    return "&#x".dechex($unicode).";";
 	},$str);
     return $ret;
+}
+function checkreferer(){
+	if(!preg_match('!^'.REFERER_MUST_START.'!', $_SERVER['HTTP_REFERER'])) printError("referer must be ".REFERER_MUST_START.", but got ".$_SERVER['HTTP_REFERER']);
 }
