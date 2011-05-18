@@ -1,0 +1,33 @@
+.name{font-weight:bold;}
+form{display:inline}
+span b{background:#F00;color:#FFF;padding:4px}
+span{visibility:visible}
+html{overflow: hidden; height:100%; }
+body{ height:100%; width: 100%; margin:0;font-family: 'Arial';}
+#plog{overflow:auto;width:100%;padding:0;margin:0;position:absolute;top:55px;bottom:0;background-color:#fff}
+#log{padding:5px}
+#joubu{padding:5px;white-space:nowrap;}
+
+/*入室者リスト*/
+#disp{position:absolute;right:20px;bottom:20px;text-align:right;filter:alpha(opacity=45); /*IE*/-moz-opacity:0.45; /*FF*/opacity:0.45;z-index:100;visibility:hidden;}
+#inlist{display:inline;margin:0;padding:0;visibility:hidden;}
+#inlist li{display:block; list-style:none;visibility:hidden;}
+#inlist li span{background-color:#dddddd;font-weight:bold;visibility:visible;}
+#editor{position:absolute;bottom:50px;left:50px;z-index:0;width:60%}
+.small{
+	font-size:smaller;
+	color:#cccccc;
+}
+.name:after{
+	content:">";
+	font-weight:normal;
+}
+dt, dd{display:inline}
+dd{margin-left:5px;}
+dl{margin-top:0;margin-bottom:0}
+dt~dt:before{content:"\a";white-space:pre}/*dtの後のdt*/
+span.in{color:rgb(0, 0, 255)}
+span.out{color:rgb(0, 0, 255)}
+
+input[type=text]:disabled{background-color: #dddddd;}
+input[type=text]:enabled{background-color: #ffffff;}
