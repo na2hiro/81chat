@@ -4,7 +4,6 @@ function HighChat(){
 	document.f2.n.disabled = false;		//フォーム名前
 	document.f2.login.disabled = false;	//ボタン入退室
 	document.f.c.disabled = true;		//フォームメッセージ
-	//document.f.hatsugen.disabled = true;	//ボタン発言
 	document.f2.n.value=this.GetCookie("name_chat");
 	var vol=this.GetCookie("volume_chat");
 	document.getElementById("audiocontrols").value=vol;
