@@ -1,4 +1,10 @@
 <?php
+/*
+ * 81chat (HighChat) by na2hiro http://81.la
+ * https://github.com/na2hiro/81chat
+ * 
+ * log viewer by uhyo
+ */
 header("Access-Control-Allow-Origin: *");
 
 require("pass.php");

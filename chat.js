@@ -1,3 +1,8 @@
+/*
+ * 81chat (HighChat) by na2hiro http://81.la
+ * https://github.com/na2hiro/81chat
+ */
+
 var disip="";
 
 function HighChat(){
@@ -218,18 +223,18 @@ HighChat.prototype={
 					try{
 						var obj=JSON.parse(this.responseText);
 					}catch(e){
-						this.message(e+": "+this.responseText);
+						this.parent.message(e+": "+this.responseText);
 						return;
 					}
 					if(obj.error!=false){
-						this.message("エラー! "+obj.errormessage);
+						this.parent.message("エラー! "+obj.errormessage);
 						return;
 					}
 					this.parent.login();
 					this.parent.SetCookie("name_chat", document.f2.n.value);
 					this.parent.loginid=obj.id;
 					this.parent.standardResponse(this.responseText);
-					this.message("入室しました: "+obj.id);
+					this.parent.message("入室しました: "+obj.id);
 				}
 			});
 
@@ -240,11 +245,11 @@ HighChat.prototype={
 					try{
 						var obj=JSON.parse(this.responseText);
 					}catch(e){
-						this.message(e+": "+this.responseText);
+						this.parent.message(e+": "+this.responseText);
 						return;
 					}
 					if(obj.error!=false){
-						this.message("エラー! "+obj.errormessage);
+						this.parent.message("エラー! "+obj.errormessage);
 						return;
 					}
 					this.parent.logout();

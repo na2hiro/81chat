@@ -1,4 +1,8 @@
 <?php
+/*
+ * 81chat (HighChat) by na2hiro http://81.la
+ * https://github.com/na2hiro/81chat
+ */
 header("Access-Control-Allow-Origin: *");
 if($_SERVER["REMOTE_ADDR"]=="61.27.73.10") printError("damn!");
 
@@ -197,5 +201,7 @@ function utf84byte($str){
 }
 //CSRF対策のリファラチェック
 function checkreferer(){
-	if(!preg_match('!^'.REFERER_MUST_START.'!', $_SERVER['HTTP_REFERER'])) printError("referer must be ".REFERER_MUST_START.", but got ".$_SERVER['HTTP_REFERER']);
+	
+//	if(!preg_match('!^'.REFERER_MUST_START.'!', $_SERVER['HTTP_REFERER'])
+//			&& !preg_match('!^http://mamesoft.jp/81chat/!', $_SERVER['HTTP_REFERER'])) printError("referer must be ".REFERER_MUST_START.", but got ".$_SERVER['HTTP_REFERER']);
 }
