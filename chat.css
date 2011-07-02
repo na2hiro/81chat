@@ -28,6 +28,7 @@ dl{margin-top:0;margin-bottom:0}
 dt~dt:before{content:"\a";white-space:pre}/*dtの後のdt*/
 span.in{color:rgb(0, 0, 255)}
 span.out{color:rgb(0, 0, 255)}
+#log dt img{vertical-glign:middle;}
 
 input[type=text]:disabled{background-color: #dddddd;}
 input[type=text]:enabled{background-color: #ffffff;}
