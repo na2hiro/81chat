@@ -37,7 +37,7 @@ dl#log dd{
 dl#log dt~dt:before{content:"\a";white-space:pre}/*dtの後のdt*/
 span.in{color:rgb(0, 0, 255)}
 span.out{color:rgb(0, 0, 255)}
-dl#log dd img{vertical-align:middle;}
+#log dd img{vertical-align:middle;}
 
 input[type=text]:disabled{background-color: #dddddd;}
 input[type=text]:enabled{background-color: #ffffff;}
