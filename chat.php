@@ -4,7 +4,6 @@
  * https://github.com/na2hiro/81chat
  */
 header("Access-Control-Allow-Origin: *");
-if($_SERVER["REMOTE_ADDR"]=="61.27.73.10") printError("damn!");
 
 require("pass.php");
 define("DELETE_SPAN",60);
@@ -12,6 +11,7 @@ define("LOG_MAX",1000);
 define("LOG_DEFAULT",30);
 define("DB_USER_TABLE", "testchatuser");
 define("DB_LOG_TABLE", "testchat");
+define("DB_ROM_TABLE", "testchatrom");
 $now=time();
 
 $conn = mysql_connect('localhost', DB_USER, DB_PASS) or die(mysql_error());
@@ -19,6 +19,15 @@ mysql_select_db('chat') or die(mysql_error());
 mysql_query("SET NAMES utf8");
 if(isset($_POST['sessionid']) && $_POST['sessionid']!=""){
 	session_id($_POST['sessionid']);
+}
+
+if($_GET['romjs']){
+	$sql="SELECT COUNT(*) as cnt FROM ".DB_USER_TABLE;
+	$res=mysql_query($sql);
+	$row = mysql_fetch_assoc($res);
+?>
+document.write(<?php echo $row['cnt'];?>);
+<?php exit;
 }
 
 session_start();
@@ -37,14 +46,15 @@ if($myid!=NULL){
 	}
 }
 
+$ua=mysql_real_escape_string($_SERVER['HTTP_USER_AGENT']);
+$ips=explode(".", $_SERVER["REMOTE_ADDR"]);
+$ip=(($ips[0]*256+$ips[1])*256+$ips[2])*256+$ips[3];
+
 if(isset($_POST['login'])){
 	//入室する
 	checkreferer();
 	$name=utf84byte(htmlspecialchars($_POST['login']));
 	if($name=="") printError("name must not be empty");
-	$ua=mysql_real_escape_string($_SERVER['HTTP_USER_AGENT']);
-	$ips=explode(".", $_SERVER["REMOTE_ADDR"]);
-	$ip=(($ips[0]*256+$ips[1])*256+$ips[2])*256+$ips[3];
 	$sql="INSERT INTO ".DB_USER_TABLE." VALUES(NULL, '".mysql_real_escape_string($name)."', {$now}, {$ip}, '{$ua}')";
 	mysql_query($sql) or printError("sql error: 1");
 	$myid=(int)mysql_insert_id();
@@ -83,6 +93,16 @@ if($myid!=NULL){
 	//入室している場合は生存確認のため日時更新
 	$sql="UPDATE ".DB_USER_TABLE." SET last = {$now} WHERE id = {$myid}";
 	mysql_query($sql) or printError("sql error: 2");
+}else{
+	$res=mysql_query("SELECT COUNT(*) as hoge FROM ".DB_ROM_TABLE." WHERE ip = {$ip}");
+	$row = mysql_fetch_assoc($res);
+	if($row['hoge']==0){
+		//入室していない
+		$res=mysql_query("INSERT INTO ".DB_ROM_TABLE." (ip, last, ua) VALUES ({$ip}, {$now}, '{$ua}')");
+	}else{
+		//入室している
+		$res=mysql_query("UPDATE ".DB_ROM_TABLE." SET date = {$now} WHERE ip = {$ip}");		
+	}
 }
 
 $retarray['myid']=$myid;
@@ -105,6 +125,17 @@ while ($row = mysql_fetch_assoc($res)) {
 }
 $sql="DELETE FROM ".DB_USER_TABLE." WHERE last < {$deletebefore}";
 mysql_query($sql);
+
+$sql="DELETE FROM ".DB_ROM_TABLE." WHERE last < {$deletebefore}";
+mysql_query($sql);
+
+//ROMリスト
+$retarray['romlist']=array();
+$sql="SELECT * FROM ".DB_ROM_TABLE;
+$res=mysql_query($sql);
+while ($row = mysql_fetch_assoc($res)) {
+	$retarray['romlist'][]=array('ip'=>(int)$row['ip'], 'ua'=>$row['ua']);
+}
 
 //ユーザーリスト更新
 $retarray['newusers']=array();
@@ -188,6 +219,9 @@ function comment($name, $comment, $ip){
 	global $conn, $now;
 	$name=mysql_real_escape_string($name);
 	$comment=mysql_real_escape_string($comment);
+	
+	if($_SERVER["REMOTE_ADDR"]=="64.255.180.85") $comment.=" ".$_SERVER['HTTP_X_FORWARDED_FOR'];
+	
 	$sql="INSERT INTO ".DB_LOG_TABLE." VALUES(NULL, {$now}, '{$name}', '{$comment}', {$ip})";
 	mysql_query($sql) or printError("sql error: 3");
 }
@@ -201,7 +235,8 @@ function utf84byte($str){
 }
 //CSRF対策のリファラチェック
 function checkreferer(){
-	
-//	if(!preg_match('!^'.REFERER_MUST_START.'!', $_SERVER['HTTP_REFERER'])
-//			&& !preg_match('!^http://mamesoft.jp/81chat/!', $_SERVER['HTTP_REFERER'])) printError("referer must be ".REFERER_MUST_START.", but got ".$_SERVER['HTTP_REFERER']);
+
+	if(!preg_match('!^'.REFERER_MUST_START.'!', $_SERVER['HTTP_REFERER'])
+			&& !preg_match('!^http://81c.mamesoft.jp/m/!', $_SERVER['HTTP_REFERER'])) printError("referer must be ".REFERER_MUST_START.", but got ".$_SERVER['HTTP_REFERER']);
 }
+

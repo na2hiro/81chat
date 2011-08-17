@@ -1,8 +1,3 @@
-/*
- * 81chat (HighChat) by na2hiro http://81.la
- * https://github.com/na2hiro/81chat
- */
-
 var disip="";
 
 function HighChat(){
@@ -12,6 +7,47 @@ function HighChat(){
 	document.f2.n.value=this.GetCookie("name_chat");
 	var vol=this.GetCookie("volume_chat");
 	document.getElementById("audiocontrols").value=vol;
+	this.gyazotype=this.GetCookie("gyazotype");
+	this.gyazotype==""||isNaN(this.gyazotype)?this.gyazotype=0:0;
+	this.renderGyazoType();
+	
+	if(this.gyazotype==1){
+		try{
+			document.getElementById("log").addEventListener('mouseover', function(e){
+				var t=e.target;
+				if(t.tagName.toLowerCase()=="a"){
+					var result=t.href.match(/^http:\/\/gyazo\.com\/([0-9a-f]{32})\.png$/);
+					if(result){
+						if(t.dataset?t.dataset.gyazoloaded==1:t["data-gyazoloaded"]==1){
+							
+						}else{
+							var img=document.createElement("img");
+							img.src="http://img.gyazo.com/a/"+result[1]+".png";
+							img.className="thumbnail";
+							t.textContent="[Gyoza...]";
+							t.style.position="relative"
+							t.style.display="inline-block"
+							img.style.position="absolute";
+							img.style.top=0;
+							img.style.left=0;
+							img.onmouseout=function(){
+								t.removeChild(img);
+								t.dataset?t.dataset.gyazoloaded=0:t["data-gyazoloaded"]=0;
+							}
+							img.onload=function(){
+								t.dataset?t.dataset.gyazoloaded=1:t["data-gyazoloaded"]=1;
+								t.textContent="[Gyazo]";
+								t.appendChild(img);
+							};
+						}
+					}
+				}
+			}, false);
+		}catch(e){
+			alert("IE");
+		}
+	}
+
 
 	this.volume(vol);
 }
@@ -21,7 +57,15 @@ HighChat.prototype={
 	userdata: {},
 	userlist: [],
 	loginid: null,
-	
+	switchGyazoType: function(){
+		this.gyazotype++;
+		this.gyazotype%=3;
+		this.renderGyazoType();
+		this.SetCookie("gyazotype", this.gyazotype);
+	},
+	renderGyazoType: function(){
+		document.getElementById("gyazotype").innerHTML="餃子"+["無展開","オンマウス","常時"][this.gyazotype];
+	},
 	//仕様
 	note: function(){
 		alert("■仕様■\n\
@@ -74,22 +118,20 @@ HighChat.prototype={
 		this.submit("check", func);
 	},
 	//userlistからユーザー一覧を表示する
-	writeuserlist: function(userlist){
+	writeuserlist: function(userlist, romlist){
 		var node = this.gid("disp");
 		var output="<ul id='inlist'>";
-		var cntrom="";
+		var cntrom=romlist.length;
 		var cnt=0;
 		for(var i=0, l=userlist.length; i<l; i++){
 			var thisid=userlist[i];
 			var thisdata=this.userdata[thisid];
-//			if(tmp[0]=="(ROM)"){
-//				cntrom++;
-//			}else{
-				output+="<li title='"+thisdata.ip.join(".")+" / "+thisdata.ua+"'><span>"+thisdata.name+"</span></li>";
-				cnt++;
-//			}
+			output+="<li title='"+thisdata.ip.join(".")+" / "+thisdata.ua+"'><span>"+thisdata.name+"</span></li>";
+			cnt++;
 		}
-    	node.innerHTML ="<span style='background-color:#fff'>入室"+cnt+(cntrom?"(ROM"+cntrom+")":"")+"</span>"+output+"</ul>";
+    	node.innerHTML ="<span style='background-color:#fff'>入室"+cnt
+    		+(cntrom?"<span title='"+romlist.map(function(value){return "["+this.getIpByNum(value.ip).join(".")+"] / "+value.ua;}, this).join("\n")+"'>(ROM"+cntrom+")</span>":"")
+    		+"</span>"+output+"</ul>";
 	},
 	//発言する
 	post: function(message, func){
@@ -135,7 +177,7 @@ HighChat.prototype={
 				ua: thisuser.ua
 			}
 		}
-		this.writeuserlist(obj.userlist);
+		this.writeuserlist(obj.userlist, obj.romlist);
 		this.message("更新済");
 		this.lastObj=obj;
 	},
@@ -182,14 +224,18 @@ HighChat.prototype={
 
 			var newline1 = document.createElement("dt");
 			newline1.style.color=colorna2;
-			newline1.className="name";
+//			newline1.className="name";
 			newline1.innerHTML=line.name;
 
 			var newline2 = document.createElement("dd");
 			newline2.style.color=colorna2;
 			newline2.innerHTML=[
 				line.comment
-					.replace(/(http:\/\/gyazo.com\/[\x21\x23-\x3b\x3d-\x7e]+?\.png)/ig, "<a href=\"$1\" target='_blank'>[Gyazo]</a>")
+					.replace(/http:\/\/gyazo.com\/([0-9a-f]{32})(\.png)?/ig, 
+						this.gyazotype==2
+						?"<a href=\"http://gyazo.com/$1.png\" target='_blank'><img src=\"http://img.gyazo.com/a/$1.png\" class='thumbnail'></a>"
+						:"<a href=\"http://gyazo.com/$1.png\" target='_blank'>[Gyazo]</a>"
+					)
 					.replace(/([^">])http(s?):\/\/([^\s\[<　]+)/gi, "$1<a href=\"http$2://$3\" target='_blank'>http$2://$3</a>")
 					.replace(/^http(s?):\/\/([^\s\[<　]+)/gi, "<a href=\"http$1://$2\" target='_blank'>http$1://$2</a>")
 					.replace(/\[small\](.+?)$/ig, "<small>$1</small>")
@@ -289,16 +335,13 @@ HighChat.prototype={
 		document.f2.n.disabled = true;		//フォーム名前
 		document.f.c.disabled = false;		//フォームメッセージ
 		document.f2.login.value = "退室";
-
 		document.f.c.focus();
-
 	},
 	//退室時の表示
 	logout: function(){
 		document.f2.n.disabled = false;		//フォーム名前
 		document.f.c.disabled = true;		//フォームメッセージ
 		document.f2.login.value = "入室";
-
 		document.f2.n.focus();
 	},
 	//数字からip配列を得る
@@ -361,14 +404,6 @@ HighChat.prototype={
 	//アラートなどのメッセージを表示
 	message: function(mess){
 		this.gid("status").innerHTML = mess;
-	}
-}
-
-window.document.onkeydown = function (ev){
-	var e = ev||event;
-	if (e.keyCode == 116){
-		e.keyCode = null;
-		return false;
 	}
 }
 
