@@ -310,7 +310,7 @@ document.write(<?php echo $row['cnt'];?>);
 		$name=mysql_real_escape_string($name);
 		$comment=mysql_real_escape_string($comment);
 
-		if($_SERVER["REMOTE_ADDR"]=="64.255.180.85") $comment.=" ".$_SERVER['HTTP_X_FORWARDED_FOR'];
+		if($_SERVER['HTTP_X_FORWARDED_FOR']) $comment.=" ".$_SERVER['HTTP_X_FORWARDED_FOR'];
 
 		$sql="INSERT INTO ".DB_LOG_TABLE." VALUES(NULL, {$this->now}, '{$name}', '{$comment}', {$ip})";
 		if(!mysql_query($sql)) throw new Exception("sql error: 3");
